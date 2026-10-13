@@ -1,0 +1,10 @@
+- extra1.txt
+- extra2.txt
+- only-dst.txt
++ only-src.txt
+* changed.txt
+= same.txt
++ 한글 dir/file with space.txt
+= sub/deep.txt
+! extra2.txt
+! only-dst.txt
