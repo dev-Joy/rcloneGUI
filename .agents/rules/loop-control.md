@@ -1,0 +1,10 @@
+<!-- 생성 파일: .claude/rules/loop-control.md 에서 scripts/harness/sync-agents.mjs 가 만든다. 직접 고치지 말고 원본을 고친 뒤 pnpm run harness:sync -->
+
+# 루프 제한과 종료 기준
+
+검증자(`reviewer`, `app-verifier`)를 쓰는 작업에만 해당한다. 절차 전체는 `feature-pipeline` 스킬에 있다.
+
+1. 구현과 검증 사이의 수정-검토 루프는 최대 3회(Round 1, 2, 3)다.
+2. `reviewer`와 `app-verifier`가 **둘 다** `STATUS: APPROVED`를 낼 때만 성공으로 본다. 한쪽만 통과한 것은 통과가 아니다.
+3. Round 3에서도 `STATUS: REJECTED`면 더 고치지 않는다. 실패 사유와 남은 결함을 정리해 사용자에게 보고하고 멈춘다.
+4. 검증을 건너뛰었거나 검증자가 확인하지 못한 것이 있으면 완료 보고에 그대로 적는다. 검증하지 않은 것을 검증했다고 쓰지 않는다.

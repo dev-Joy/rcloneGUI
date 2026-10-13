@@ -1,0 +1,58 @@
+{
+    "rclone-guard": {
+        "PreToolUse": [
+            {
+                "matcher": "run_command",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node ./scripts/guard-rclone.mjs",
+                        "description": "셸 실행 전 --dry-run 없는 rclone 쓰기 명령(sync/copy/move/delete/purge) 차단"
+                    }
+                ]
+            }
+        ]
+    },
+    "secret-guard": {
+        "PreToolUse": [
+            {
+                "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node ./scripts/secret-guard.mjs",
+                        "description": "파일 쓰기 전 토큰·비밀번호·rclone.conf 내용·개인 키 하드코딩 검사 및 차단"
+                    }
+                ]
+            }
+        ]
+    },
+    "format-edited": {
+        "PostToolUse": [
+            {
+                "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node ./scripts/format-edited.mjs",
+                        "description": "파일 쓰기 직후 oxfmt로 포맷 (공백 4칸, 큰따옴표, 세미콜론)"
+                    }
+                ]
+            }
+        ]
+    },
+    "metrics-tracer": {
+        "PostToolUse": [
+            {
+                "matcher": ".*",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node ./scripts/metrics-tracer.mjs",
+                        "description": "스킬·서브에이전트 사용을 .claude/usage-metrics.log에 기록"
+                    }
+                ]
+            }
+        ]
+    }
+}

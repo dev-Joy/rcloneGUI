@@ -1,0 +1,77 @@
+{
+    "permissions": {
+        "allow": [
+            "PowerShell(pnpm run check)",
+            "PowerShell(pnpm run typecheck)",
+            "PowerShell(pnpm run lint)",
+            "PowerShell(pnpm run test)",
+            "PowerShell(pnpm run test:int)",
+            "PowerShell(pnpm run build)",
+            "PowerShell(pnpm run format)",
+            "PowerShell(pnpm run format:check)",
+            "PowerShell(node .claude/hooks/usage-metrics.mjs --summary)",
+            "Bash(pnpm run check)",
+            "Bash(pnpm run typecheck)",
+            "Bash(pnpm run lint)",
+            "Bash(pnpm run test)",
+            "Bash(pnpm run test:int)",
+            "Bash(pnpm run build)",
+            "Bash(pnpm run format)",
+            "Bash(pnpm run format:check)",
+            "Bash(node .claude/hooks/usage-metrics.mjs --summary)"
+        ]
+    },
+    "hooks": {
+        "PreToolUse": [
+            {
+                "matcher": "PowerShell|Bash",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node",
+                        "args": [".claude/hooks/guard-rclone.mjs"],
+                        "timeout": 10,
+                        "statusMessage": "rclone 명령 검사 중"
+                    }
+                ]
+            },
+            {
+                "matcher": "Edit|Write",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node",
+                        "args": [".claude/hooks/secret-guard.mjs"],
+                        "timeout": 10,
+                        "statusMessage": "비밀값 검사 중"
+                    }
+                ]
+            }
+        ],
+        "PostToolUse": [
+            {
+                "matcher": "Edit|Write",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node",
+                        "args": [".claude/hooks/format-edited.mjs"],
+                        "timeout": 30,
+                        "statusMessage": "oxfmt로 포맷 중"
+                    }
+                ]
+            },
+            {
+                "matcher": "Skill|Agent|Task",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node",
+                        "args": [".claude/hooks/usage-metrics.mjs"],
+                        "timeout": 10
+                    }
+                ]
+            }
+        ]
+    }
+}
