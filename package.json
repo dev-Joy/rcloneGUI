@@ -1,0 +1,46 @@
+{
+    "name": "baton",
+    "productName": "Baton",
+    "version": "0.1.0",
+    "description": "rclone 기반 폴더 비교·동기화 데스크톱 앱",
+    "private": true,
+    "packageManager": "pnpm@12.5.1",
+    "main": "./out/main/index.js",
+    "scripts": {
+        "postinstall": "install-electron",
+        "dev": "electron-vite dev",
+        "build": "electron-vite build",
+        "start": "electron-vite preview",
+        "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+        "lint": "oxlint && eslint .",
+        "format": "oxfmt",
+        "format:check": "oxfmt --check",
+        "test": "vitest run tests/unit",
+        "test:int": "vitest run tests/integration",
+        "harness:sync": "node scripts/harness/sync-agents.mjs",
+        "harness:check": "node scripts/harness/sync-agents.mjs --check",
+        "check": "pnpm run typecheck && pnpm run lint && pnpm run harness:check && pnpm run test"
+    },
+    "dependencies": {
+        "@tanstack/react-virtual": "^3.14.14",
+        "react": "^19.3.0",
+        "react-dom": "^19.3.0",
+        "zod": "^4.6.5",
+        "zustand": "^5.0.15"
+    },
+    "devDependencies": {
+        "@types/node": "^24.19.2",
+        "@types/react": "^19.3.0",
+        "@types/react-dom": "^19.3.0",
+        "@vitejs/plugin-react": "^5.2.0",
+        "electron": "^44.7.0",
+        "electron-vite": "^5.0.0",
+        "eslint": "^10.12.0",
+        "oxfmt": "^0.72.0",
+        "oxlint": "^1.87.0",
+        "typescript": "^6.0.3",
+        "typescript-eslint": "^8.71.1",
+        "vite": "^7.3.7",
+        "vitest": "^5.0.3"
+    }
+}

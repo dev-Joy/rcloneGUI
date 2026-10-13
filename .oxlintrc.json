@@ -1,0 +1,69 @@
+{
+    "$schema": "./node_modules/oxlint/configuration_schema.json",
+    "plugins": ["react", "typescript", "oxc"],
+    "ignorePatterns": ["out", "dist"],
+    "rules": {
+        "react/rules-of-hooks": "error",
+        "react/only-export-components": ["warn", { "allowConstantExport": true }],
+        "react/exhaustive-deps": "warn",
+        "typescript/no-explicit-any": "error",
+        "no-restricted-imports": [
+            "error",
+            {
+                "patterns": [
+                    { "regex": "^\\.\\./", "message": "상위 폴더는 \"@/\"로 가져온다 (AGENTS.md 개발 규칙)." }
+                ]
+            }
+        ]
+    },
+    "overrides": [
+        {
+            "files": ["src/renderer/**", "src/components/**", "src/pages/**", "src/stores/**", "src/lib/**"],
+            "rules": {
+                "no-restricted-imports": [
+                    "error",
+                    {
+                        "paths": ["electron", "fs", "path", "os", "child_process"],
+                        "patterns": [
+                            {
+                                "regex": "^\\.\\./",
+                                "message": "상위 폴더는 \"@/\"로 가져온다 (AGENTS.md 개발 규칙)."
+                            },
+                            {
+                                "group": ["node:*", "fs/*", "@/main/**", "@/preload/**"],
+                                "message": "화면은 preload가 열어 준 window.baton만 쓴다 (AGENTS.md 1.5)."
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "files": ["src/shared/**"],
+            "rules": {
+                "no-restricted-imports": [
+                    "error",
+                    {
+                        "paths": ["electron"],
+                        "patterns": [
+                            {
+                                "regex": "^\\.\\./",
+                                "message": "상위 폴더는 \"@/\"로 가져온다 (AGENTS.md 개발 규칙)."
+                            },
+                            {
+                                "group": ["node:*"],
+                                "message": "shared는 Node·DOM에 기대지 않는다 (AGENTS.md 3)."
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "files": [".claude/**", ".agents/**", "scripts/**"],
+            "rules": {
+                "no-restricted-imports": "off"
+            }
+        }
+    ]
+}

@@ -1,0 +1,19 @@
+{
+    "$schema": "./node_modules/oxfmt/configuration_schema.json",
+    "semi": true,
+    "singleQuote": false,
+    "tabWidth": 4,
+    "useTabs": false,
+    "trailingComma": "all",
+    "printWidth": 110,
+    "sortPackageJson": false,
+    "ignorePatterns": [
+        "node_modules",
+        "out",
+        "dist",
+        "pnpm-lock.yaml",
+        "tests/fixtures",
+        "AGENTS.md",
+        ".agents/**/*.md"
+    ]
+}
