@@ -78,7 +78,9 @@ describe("validateJobPaths", () => {
 
     it("원본이 백업 폴더 안이면 거부", () => {
         expect(
-            f_Code(() => validateJobPaths(makeJob({ source: "D:\\.baton-backup\\x", dest: "D:\\backup" }))),
+            f_Code(() =>
+                validateJobPaths(makeJob({ source: "D:\\.rclonegui-backup\\x", dest: "D:\\backup" })),
+            ),
         ).toBe("BACKUP_OVERLAPS_SOURCE");
     });
 
@@ -108,7 +110,7 @@ describe("makeJobId", () => {
 describe("작업·실행 저장소 (임시 폴더)", () => {
     let dir: string;
     beforeEach(async () => {
-        dir = await mkdtemp(join(tmpdir(), "baton-unit-"));
+        dir = await mkdtemp(join(tmpdir(), "rclonegui-unit-"));
         await mkdir(join(dir, "src"));
     });
     afterEach(async () => {

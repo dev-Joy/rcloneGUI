@@ -50,7 +50,7 @@ export interface itfRunnerDeps {
     defaultConfig: () => Promise<string | null>;
     emit: (event: typRunEvent) => void;
     now?: () => Date;
-    /** 백업 폴더 규칙. 기본은 대상 드라이브 최상위의 .baton-backup (테스트에서 바꿔 끼운다). */
+    /** 백업 폴더 규칙. 기본은 대상 드라이브 최상위의 .rclonegui-backup (테스트에서 바꿔 끼운다). */
     backupDirFor?: (dest: string, jobId: string, runId: string) => string | null;
 }
 

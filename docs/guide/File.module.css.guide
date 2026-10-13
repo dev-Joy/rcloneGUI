@@ -15,7 +15,7 @@
  *  - 위치: 컴포넌트(.tsx)와 같은 폴더에 생성
  *      - 페이지:  src/pages/JobPage.module.css
  *      - 레이아웃: src/pages/AppLayout.module.css
- *        (Baton 은 페이지와 레이아웃을 모두 src/pages 에 둔다)
+ *        (rcloneGUI 은 페이지와 레이아웃을 모두 src/pages 에 둔다)
  *  - 명칭: 반드시 `컴포넌트명.module.css` (CSS Modules 자동 인식)
  *  - import (TSX에서): 동일 폴더이므로 "./" 사용
  *      import styles from "./JobPage.module.css";

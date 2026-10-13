@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# rclone behaviour probes for the Baton development plan.
+# rclone behaviour probes for the rcloneGUI development plan.
 # Usage: rclone_probes.sh <empty work dir>
 set -u
 WORK="$1"
@@ -91,7 +91,7 @@ run rclone sync src dst --dry-run --exclude "node_modules/**" 2>&1 | grep -E 'de
 
 hdr "L. --config with alias remotes + --filter-from + lsjson"
 setup
-cat > baton-test.conf <<'EOF'
+cat > rclonegui-test.conf <<'EOF'
 [proj-src]
 type = alias
 remote = ./src
@@ -101,9 +101,9 @@ type = alias
 remote = ./dst
 EOF
 printf -- '- node_modules/**\n- *.sock\n+ **\n' > job.filter
-run rclone --config baton-test.conf listremotes
-run rclone --config baton-test.conf check proj-src: proj-dst: --filter-from job.filter --combined - 2>/dev/null
-run rclone --config baton-test.conf lsjson -R --files-only --filter-from job.filter proj-src: 2>&1 | head -6
+run rclone --config rclonegui-test.conf listremotes
+run rclone --config rclonegui-test.conf check proj-src: proj-dst: --filter-from job.filter --combined - 2>/dev/null
+run rclone --config rclonegui-test.conf lsjson -R --files-only --filter-from job.filter proj-src: 2>&1 | head -6
 
 hdr "M. usage error exit code"
 run rclone sync onlyonearg 2>&1 | tail -1

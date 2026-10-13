@@ -39,7 +39,7 @@ function f_CreateWindow(): void {
         minHeight: 560,
         show: false,
         autoHideMenuBar: true,
-        title: "Baton",
+        title: "rcloneGUI",
         backgroundColor: "#f6f7f9",
         webPreferences: {
             preload: join(__dirname, "../preload/index.js"),

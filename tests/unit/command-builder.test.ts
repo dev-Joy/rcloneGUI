@@ -37,7 +37,7 @@ const execute: itfBuildContext = {
     ...base,
     kind: "execute",
     maxDelete: 3,
-    backupDir: "D:\\.baton-backup\\sample-job\\r1",
+    backupDir: "D:\\.rclonegui-backup\\sample-job\\r1",
 };
 
 const f_ValueOf = (args: string[], flag: string): string | undefined => args[args.indexOf(flag) + 1];
@@ -78,7 +78,7 @@ describe("buildArgs", () => {
     it("sync 실행에는 확인한 삭제 수와 백업 폴더를 넣는다", () => {
         const args = buildArgs(makeJob(), execute);
         expect(f_ValueOf(args, "--max-delete")).toBe("3");
-        expect(f_ValueOf(args, "--backup-dir")).toBe("D:\\.baton-backup\\sample-job\\r1");
+        expect(f_ValueOf(args, "--backup-dir")).toBe("D:\\.rclonegui-backup\\sample-job\\r1");
     });
 
     it("삭제가 0개로 확인됐으면 --max-delete 0으로 삭제를 전부 막는다", () => {

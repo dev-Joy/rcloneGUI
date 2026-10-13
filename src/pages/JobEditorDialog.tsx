@@ -73,7 +73,7 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
     //
     useEffect(() => {
         // 리모트가 없거나 rclone이 없어도 편집은 할 수 있어야 하므로 실패는 조용히 넘긴다.
-        unwrap(window.baton.rclone.remotes()).then(setRemotes, () => setRemotes([]));
+        unwrap(window.rclonegui.rclone.remotes()).then(setRemotes, () => setRemotes([]));
     }, []);
 
     //
@@ -105,7 +105,7 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
 
     /** 폴더 선택 창을 띄워 원본 또는 대상에 넣는다 */
     async function h_PickFolder(field: "source" | "dest") {
-        const folder = await unwrap(window.baton.app.pickFolder()).catch(() => null);
+        const folder = await unwrap(window.rclonegui.app.pickFolder()).catch(() => null);
         if (folder) f_Patch({ [field]: folder });
     }
 
@@ -260,7 +260,7 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
                 <fieldset className={styles.safety}>
                     <legend className={styles.safetyTitle}>안전장치</legend>
                     <ZBCCheck checked={job.safety.backup} onChange={h_ChangeBackup}>
-                        지우거나 덮어쓸 파일을 백업 폴더(대상 드라이브의 .baton-backup)로 옮김
+                        지우거나 덮어쓸 파일을 백업 폴더(대상 드라이브의 .rclonegui-backup)로 옮김
                     </ZBCCheck>
                     {!job.safety.backup && (
                         <div className={styles.warning}>

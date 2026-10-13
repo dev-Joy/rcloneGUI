@@ -60,16 +60,16 @@ export function destKey(dest: string): string {
 
 /**
  * 백업 폴더가 들어갈 뿌리. 대상 밖이어야 하므로 드라이브(또는 공유·리모트) 최상위에 둔다.
- * 로컬 `E:\a\b` → `E:\.baton-backup`, UNC `\\s\share\a` → `\\s\share\.baton-backup`,
- * 리모트 `gd:a/b` → `gd:.baton-backup`. 드라이브를 알 수 없는 상대 경로는 null.
+ * 로컬 `E:\a\b` → `E:\.rclonegui-backup`, UNC `\\s\share\a` → `\\s\share\.rclonegui-backup`,
+ * 리모트 `gd:a/b` → `gd:.rclonegui-backup`. 드라이브를 알 수 없는 상대 경로는 null.
  */
 export function backupRoot(dest: string): string | null {
     const loc = parseLocation(dest);
-    if (loc.kind === "remote") return `${loc.remote}:.baton-backup`;
+    if (loc.kind === "remote") return `${loc.remote}:.rclonegui-backup`;
     const drive = /^([A-Za-z]:)[\\/]/.exec(loc.path);
-    if (drive) return `${drive[1]}\\.baton-backup`;
+    if (drive) return `${drive[1]}\\.rclonegui-backup`;
     const unc = /^[\\/]{2}([^\\/]+)[\\/]([^\\/]+)/.exec(loc.path);
-    if (unc) return `\\\\${unc[1]}\\${unc[2]}\\.baton-backup`;
+    if (unc) return `\\\\${unc[1]}\\${unc[2]}\\.rclonegui-backup`;
     return null;
 }
 

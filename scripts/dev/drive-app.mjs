@@ -1,5 +1,5 @@
-// 빌드한 Baton을 임시 프로필로 띄우고 Chrome DevTools Protocol로 조작한다. 화면까지 포함해 변경을 확인할 때 쓴다.
-// 실제 사용자 프로필(%APPDATA%\Baton)과 실제 작업 폴더는 건드리지 않는다.
+// 빌드한 rcloneGUI를 임시 프로필로 띄우고 Chrome DevTools Protocol로 조작한다. 화면까지 포함해 변경을 확인할 때 쓴다.
+// 실제 사용자 프로필(%APPDATA%\rcloneGUI)과 실제 작업 폴더는 건드리지 않는다.
 //
 //   node scripts/dev/drive-app.mjs launch            빌드본(out/)을 임시 프로필 + 디버그 포트로 실행
 //   node scripts/dev/drive-app.mjs seed              임시 원본·대상 폴더와 작업 "Dev Fixture"를 만든다
@@ -10,7 +10,7 @@
 //   node scripts/dev/drive-app.mjs stop              띄운 앱을 끈다
 //   node scripts/dev/drive-app.mjs clean             앱을 끄고 작업 폴더와 이 도구가 만든 백업 폴더를 지운다
 //
-// 작업 폴더: BATON_DEV_DIR 또는 <임시 폴더>/baton-dev. 포트: BATON_DEV_PORT 또는 9333.
+// 작업 폴더: RCLONEGUI_DEV_DIR 또는 <임시 폴더>/rclonegui-dev. 포트: RCLONEGUI_DEV_PORT 또는 9333.
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -19,8 +19,8 @@ import { dirname, join, parse, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const work = process.env.BATON_DEV_DIR ?? join(tmpdir(), "baton-dev");
-const port = Number(process.env.BATON_DEV_PORT ?? 9333);
+const work = process.env.RCLONEGUI_DEV_DIR ?? join(tmpdir(), "rclonegui-dev");
+const port = Number(process.env.RCLONEGUI_DEV_PORT ?? 9333);
 const pidFile = join(work, "app.pid");
 const JOB_ID = "dev-fixture";
 
@@ -165,7 +165,7 @@ async function seed() {
         rcloneConfig: null,
     };
     const app = await connect();
-    const saved = await app.evaluate(`window.baton.jobs.save(${JSON.stringify(job)})`);
+    const saved = await app.evaluate(`window.rclonegui.jobs.save(${JSON.stringify(job)})`);
     if (!saved.ok) throw new Error(saved.error.message);
     await app.evaluate("location.reload()");
     app.close();
@@ -182,7 +182,7 @@ else if (command === "clean") {
     await sleep(500);
     rmSync(work, { recursive: true, force: true });
     // sync를 실제로 돌렸다면 백업이 대상 드라이브 최상위에 생긴다. 이 도구의 작업 것만 지운다.
-    rmSync(join(parse(work).root, ".baton-backup", JOB_ID), { recursive: true, force: true });
+    rmSync(join(parse(work).root, ".rclonegui-backup", JOB_ID), { recursive: true, force: true });
     console.log(`지움: ${work}`);
 } else if (command === "seed") await seed();
 else if (["click", "text", "eval", "shot"].includes(command)) {

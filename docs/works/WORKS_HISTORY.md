@@ -4,7 +4,7 @@
 
 ## 작업
 
-### [TASK_001] : (2026-10-11) [Baton P0 구현]
+### [TASK_001] : (2026-10-11) [rcloneGUI P0 구현]
 
 - 기획서 F01~F08: 작업 관리, rclone 탐지, 리모트 목록, 비교(미리보기), 실행·진행률·취소, 안전장치 1~9, 실행 기록, 명령 복사
 - main: `command-builder`, `runner`(미리보기 없이는 실행 불가), `parsers`, `store`, IPC 핸들러
@@ -58,7 +58,7 @@
 
 - `.claude/settings.json`: PostToolUse(Edit|Write) → `hooks/format-edited.mjs`(oxfmt), PreToolUse(PowerShell|Bash) → `hooks/guard-rclone.mjs`(`--dry-run` 없는 rclone 쓰기 명령 거부), `pnpm run check` 등 검증 명령 허용
 - `.claude/rules/`: `ui.md`, `main-process.md`, `tests.md` (경로별로만 읽힘)
-- `.claude/skills/`: `run-baton`(앱을 띄워 화면 확인), `rclone-probe`(rclone 동작 재확인), `new-ui-file`(컴포넌트 추가 절차)
+- `.claude/skills/`: `run-rclonegui`(앱을 띄워 화면 확인), `rclone-probe`(rclone 동작 재확인), `new-ui-file`(컴포넌트 추가 절차)
 - `scripts/dev/drive-app.mjs`: 빌드본을 임시 프로필로 띄워 CDP로 조작 (launch · seed · click · text · eval · shot · stop · clean)
 - 확인: 훅 스크립트는 가짜 입력으로 14개 경우를 테스트, drive-app은 실행 → 비교 → 확인 → 동기화 → 정리까지 실제로 돌림
 - 남은 것: 훅은 `.claude/`가 없던 세션에서는 발동하지 않아 새 세션에서 확인 필요
@@ -66,9 +66,9 @@
 ### [TASK_007] : (2026-10-11) [멀티 에이전트 하네스 참고해 보강]
 
 - 참고: Antigravity용 멀티 에이전트 하네스 프롬프트 (architect → implementer → reviewer + browser, 루프 최대 3회, secret-guard, metrics)
-- 가져온 것 (Baton · Claude Code에 맞게 고침)
+- 가져온 것 (rcloneGUI · Claude Code에 맞게 고침)
     - `.claude/agents/reviewer.md`: 안전장치 · 비밀값 · 명세 충족 · 정확성 · 규칙 순으로 감사, 검사를 직접 돌림
-    - `.claude/agents/app-verifier.md`: `run-baton` 절차로 앱을 띄워 기본 흐름과 명세 동작 확인 (원본의 browser 역할)
+    - `.claude/agents/app-verifier.md`: `run-rclonegui` 절차로 앱을 띄워 기본 흐름과 명세 동작 확인 (원본의 browser 역할)
     - `.claude/skills/feature-pipeline`: 명세(`docs/specs/`) → 구현 → 두 검증자 병렬 → 최대 3회 루프. 지휘와 구현은 주 세션이 맡음
     - `.claude/rules/loop-control.md`: 루프 3회 제한, 둘 다 APPROVED일 때만 성공
     - `.claude/hooks/secret-guard.mjs`: Edit/Write 전에 토큰 · 비밀번호 · rclone.conf 형식 · 개인 키 검사
@@ -96,7 +96,7 @@
 - `codegraph init` → `.codegraph/codegraph.db` (60개 파일, 783 노드, 2,112 엣지). `.codegraph/.gitignore`가 DB를 git에서 제외
 - 확인: `codegraph callers findBlockedRclone`, `codegraph explore` 가 이 저장소의 실제 심볼과 줄 번호를 돌려줌
 - 확인 못 함: 에이전트 안에서의 MCP 도구 호출 (Claude Code · Antigravity 재시작 필요)
-- 주의: `.codegraph/`는 Windows와 WSL이 함께 쓰면 안 된다. Baton 작업의 제외 패턴에는 `.codegraph/daemon.sock`만이 아니라 `.codegraph/**`를 넣는다
+- 주의: `.codegraph/`는 Windows와 WSL이 함께 쓰면 안 된다. rcloneGUI 작업의 제외 패턴에는 `.codegraph/daemon.sock`만이 아니라 `.codegraph/**`를 넣는다
 
 ### [TASK_010] : (2026-10-12) [intent.md · prd.md 작성]
 
@@ -105,6 +105,18 @@
 - `docs/plan.md`는 내용을 두 문서로 옮긴 뒤 삭제 (상태 표를 두 곳에 두지 않기 위해. 안내만 남겼다가 이름이 내용과 맞지 않아 지움)
 - `feature-pipeline` 스킬, `reviewer`, `senior-architect`가 `plan.md` 대신 두 문서를 읽고 `prd.md`의 상태를 갱신하도록 고침
 - 실제 사용자 경로는 문서에 적지 않음 ("WSL 작업 폴더 → 로컬 드라이브 → Google Drive"로만 표기)
+
+### [TASK_011] : (2026-10-13) [GitHub 공개와 앱 이름 변경 (Baton → rcloneGUI)]
+
+- 저장소: https://github.com/dev-Joy/rcloneGUI (공개). 그때까지의 상태를 영역별 커밋 6개로 올림 — git 없이 작업해 작업 번호별 중간 상태는 남아 있지 않음
+- 올리기 전 전체 파일을 비밀값 · PC 경로 · 계정 이름으로 검사. 테스트의 프로젝트 이름 하나를 중립적인 이름으로 바꿈
+- 앱 이름을 저장소 이름에 맞춤. 이 기록의 앞 항목들도 새 이름으로 고쳐 적혀 있다 (이전 이름: Baton)
+    - `package.json` name `rclonegui`, productName `rcloneGUI` → 프로필 폴더가 `%APPDATA%\rcloneGUI`로 바뀜
+    - 화면 API `window.rclonegui`, 타입 `itfRcloneGuiApi`
+    - 백업 폴더 `.rclonegui-backup` (이전 실행의 백업은 `.baton-backup`에 그대로 있고, 실행 기록의 링크는 기록된 절대 경로라 계속 열림)
+    - 스킬 `run-rclonegui`, 환경 변수 `RCLONEGUI_DEV_DIR` · `RCLONEGUI_DEV_PORT` · `RCLONEGUI_TEST_RCLONE`
+- 기존 프로필(`%APPDATA%\Baton`)의 `jobs.json`과 `runs`를 새 프로필로 복사 (원본은 그대로 둠)
+- 확인: check · 통합 테스트 · 빌드 통과, 빌드본을 띄워 창 제목 · `window.rclonegui` · 비교 → 동기화 흐름과 새 백업 경로 확인
 
 ## Error
 

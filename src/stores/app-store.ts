@@ -3,7 +3,7 @@
  *
  *  @author Bruce.Cheong    2026-10-11
  *  @description
- *      - 화면 전체 상태 (작업, 선택, 실행 진행, 안내). main과는 window.baton으로만 이야기한다.
+ *      - 화면 전체 상태 (작업, 선택, 실행 진행, 안내). main과는 window.rclonegui로만 이야기한다.
  */
 
 /**
@@ -132,9 +132,9 @@ export const useApp = create<itfAppState>((set, get) => {
         async init() {
             await f_Guard(async () => {
                 const [jobs, settings, rclone] = await Promise.all([
-                    unwrap(window.baton.jobs.list()),
-                    unwrap(window.baton.settings.get()),
-                    unwrap(window.baton.rclone.status()),
+                    unwrap(window.rclonegui.jobs.list()),
+                    unwrap(window.rclonegui.settings.get()),
+                    unwrap(window.rclonegui.rclone.status()),
                 ]);
                 set({ jobs, settings, rclone, ready: true });
                 if (jobs[0]) await get().select(jobs[0].id);
@@ -145,7 +145,7 @@ export const useApp = create<itfAppState>((set, get) => {
         async select(jobId) {
             set({ selectedId: jobId });
             await f_Guard(async () => {
-                const history = await unwrap(window.baton.runs.list(jobId));
+                const history = await unwrap(window.rclonegui.runs.list(jobId));
                 f_PatchView(jobId, { history });
                 const view = get().views[jobId];
                 const latest = history[0];
@@ -155,8 +155,8 @@ export const useApp = create<itfAppState>((set, get) => {
 
         async saveJob(input) {
             try {
-                const saved = await unwrap(window.baton.jobs.save(input));
-                const jobs = await unwrap(window.baton.jobs.list());
+                const saved = await unwrap(window.rclonegui.jobs.save(input));
+                const jobs = await unwrap(window.rclonegui.jobs.list());
                 set({ jobs });
                 // 설정이 바뀌었으니 이전 미리보기로는 실행할 수 없다.
                 f_PatchView(saved.id, { invalidBefore: Date.now() });
@@ -170,8 +170,8 @@ export const useApp = create<itfAppState>((set, get) => {
 
         async deleteJob(jobId) {
             await f_Guard(async () => {
-                await unwrap(window.baton.jobs.delete(jobId));
-                const jobs = await unwrap(window.baton.jobs.list());
+                await unwrap(window.rclonegui.jobs.delete(jobId));
+                const jobs = await unwrap(window.rclonegui.jobs.list());
                 set({
                     jobs,
                     selectedId: get().selectedId === jobId ? (jobs[0]?.id ?? null) : get().selectedId,
@@ -183,13 +183,13 @@ export const useApp = create<itfAppState>((set, get) => {
 
         async preview(jobId) {
             await f_Guard(async () => {
-                await unwrap(window.baton.run.preview(jobId));
+                await unwrap(window.rclonegui.run.preview(jobId));
             });
         },
 
         async execute(jobId, previewRunId, confirmedDeletes) {
             await f_Guard(async () => {
-                await unwrap(window.baton.run.execute({ jobId, previewRunId, confirmedDeletes }));
+                await unwrap(window.rclonegui.run.execute({ jobId, previewRunId, confirmedDeletes }));
             });
         },
 
@@ -197,20 +197,22 @@ export const useApp = create<itfAppState>((set, get) => {
             const active = get().views[jobId]?.active;
             if (!active) return;
             await f_Guard(async () => {
-                await unwrap(window.baton.run.cancel(active.runId));
+                await unwrap(window.rclonegui.run.cancel(active.runId));
             });
         },
 
         async showRun(run) {
             await f_Guard(async () => {
-                const items = await unwrap(window.baton.runs.items({ jobId: run.jobId, runId: run.runId }));
+                const items = await unwrap(
+                    window.rclonegui.runs.items({ jobId: run.jobId, runId: run.runId }),
+                );
                 f_PatchView(run.jobId, { shown: run, items });
             });
         },
 
         async saveSettings(settings) {
             try {
-                const saved = await unwrap(window.baton.settings.save(settings));
+                const saved = await unwrap(window.rclonegui.settings.save(settings));
                 // rclone.conf가 바뀌면 명령이 달라지므로 모든 미리보기를 무효로 한다.
                 const now = Date.now();
                 set((state) => ({
@@ -232,7 +234,7 @@ export const useApp = create<itfAppState>((set, get) => {
 
         async refreshRclone() {
             await f_Guard(async () => {
-                set({ rclone: await unwrap(window.baton.rclone.status()) });
+                set({ rclone: await unwrap(window.rclonegui.rclone.status()) });
             });
         },
 
@@ -257,8 +259,8 @@ export const useApp = create<itfAppState>((set, get) => {
             }
             await f_Guard(async () => {
                 const [history, items] = await Promise.all([
-                    unwrap(window.baton.runs.list(jobId)),
-                    unwrap(window.baton.runs.items({ jobId, runId: event.runId })),
+                    unwrap(window.rclonegui.runs.list(jobId)),
+                    unwrap(window.rclonegui.runs.items({ jobId, runId: event.runId })),
                 ]);
                 f_PatchView(jobId, { history, shown: event.payload, items });
             });

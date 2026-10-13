@@ -5,7 +5,7 @@ description: rclone 동작 실험을 다시 돌려 앱이 기대하는 것과 �
 
 # rclone 동작 재확인
 
-Baton은 rclone의 출력 형식과 종료 코드에 기대고 있다. 기대하는 동작은 `docs/knowhow/rclone-notes.md`에 표로 적혀 있고,
+rcloneGUI는 rclone의 출력 형식과 종료 코드에 기대고 있다. 기대하는 동작은 `docs/knowhow/rclone-notes.md`에 표로 적혀 있고,
 파서 테스트는 `tests/fixtures/`의 실제 출력으로 돈다.
 
 ## 순서

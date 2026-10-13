@@ -1,5 +1,5 @@
 // Claude Code PreToolUse(Edit|Write) 훅: 파일에 비밀값(토큰, 비밀번호, 개인 키)을 적으려 하면 막는다.
-// Baton은 rclone.conf(OAuth 토큰이 든 파일)를 다루므로, 그 내용이 코드·테스트·문서에 옮겨 적히는 것을 막는 것이 목적이다.
+// rcloneGUI는 rclone.conf(OAuth 토큰이 든 파일)를 다루므로, 그 내용이 코드·테스트·문서에 옮겨 적히는 것을 막는 것이 목적이다.
 // 검사 규칙은 scripts/harness/lib.mjs에 있다.
 //
 //   훅으로:  표준 입력의 훅 JSON에서 쓰려는 내용을 읽어 검사한다

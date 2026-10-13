@@ -3,7 +3,7 @@
  *
  *  @author Bruce.Cheong    2026-10-11
  *  @description
- *      - IPC 채널 이름과 window.baton API 계약
+ *      - IPC 채널 이름과 window.rclonegui API 계약
  */
 
 /**
@@ -35,7 +35,7 @@ export interface itfRunRef {
     runId: string;
 }
 
-export interface itfBatonApi {
+export interface itfRcloneGuiApi {
     jobs: {
         list(): Promise<typResult<typJob[]>>;
         save(job: typJobInput): Promise<typResult<typJob>>;

@@ -1,4 +1,4 @@
-# AGENTS.md — Baton
+# AGENTS.md — rcloneGUI
 
 # Agent Instructions
 
@@ -76,7 +76,7 @@ Windows 설치본(`electron-builder`)은 아직 없다 (기획서 F12, P1).
 ## 3. 구조
 
 - `src/main` — rclone 실행(`rclone/`), 출력 파서(`parsers/`), 저장소(`store/`), IPC 핸들러(`ipc/`)
-- `src/preload` — contextBridge 브리지 (`window.baton`)
+- `src/preload` — contextBridge 브리지 (`window.rclonegui`)
 - `src/renderer` — 화면 진입점 (`index.html`, `main.tsx`, `env.d.ts`)
 - `src/components` — 공용 컴포넌트 `ZBC*`와 `ZBC.css`, `themes/`
 - `src/pages` — 페이지·레이아웃 컴포넌트와 `*.module.css`
@@ -89,7 +89,7 @@ Windows 설치본(`electron-builder`)은 아직 없다 (기획서 F12, P1).
     - `settings.json` — 훅 4개와 검증 명령 허용 목록
     - `hooks/` — 편집한 파일 oxfmt 포맷, `--dry-run` 없는 rclone 쓰기 명령 차단, 비밀값(토큰·비밀번호·rclone.conf 내용) 쓰기 차단, 스킬·에이전트 사용 기록
     - `rules/` — 경로별 주의 사항(화면 · main · 테스트)과 검증 루프 제한(최대 3회)
-    - `skills/` — `feature-pipeline`(명세 → 구현 → 병렬 검증), `run-baton`, `rclone-probe`, `new-ui-file`, `metrics-summary`
+    - `skills/` — `feature-pipeline`(명세 → 구현 → 병렬 검증), `run-rclonegui`, `rclone-probe`, `new-ui-file`, `metrics-summary`
     - `agents/` — `reviewer`(정적 감사), `app-verifier`(앱을 띄워 검증). 둘 다 `STATUS: APPROVED | REJECTED`로 판정만 한다
 - `.agents/` — Antigravity 하네스. `.claude/`와 같은 내용을 Antigravity 형식으로 둔다
     - `rules/`, `skills/`, `agents/reviewer.md`, `agents/app-verifier.md` — **생성 파일**. `.claude/`의 원본을 고친 뒤 `pnpm run harness:sync`로 만든다. 직접 고치지 않는다

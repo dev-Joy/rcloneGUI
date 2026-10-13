@@ -1,4 +1,4 @@
-# Baton 의도 (Intent)
+# rcloneGUI 의도 (Intent)
 
 이 문서는 **왜 만드는가**와 **판단이 갈릴 때 무엇을 고르는가**를 적는다. 무엇을 만드는지는 [prd.md](prd.md), 어떻게 작업하는지는
 [AGENTS.md](../AGENTS.md)에 있다. 사람과 AI 에이전트가 새 기능을 시작하기 전에 먼저 읽는다.

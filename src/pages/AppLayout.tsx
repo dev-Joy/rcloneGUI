@@ -73,7 +73,7 @@ export default function AppLayout(iProps: itfAppLayoutProps = propsDefault) {
     // 처음 한 번 불러오고, main이 보내는 실행 이벤트를 구독한다.
     useEffect(() => {
         void init();
-        return window.baton.run.onEvent((event) => void handleEvent(event));
+        return window.rclonegui.run.onEvent((event) => void handleEvent(event));
     }, [init, handleEvent]);
 
     // 정보 안내는 잠시 뒤 스스로 사라지고, 오류는 닫을 때까지 남긴다.
@@ -108,7 +108,7 @@ export default function AppLayout(iProps: itfAppLayoutProps = propsDefault) {
     return (
         <div className={styles.AppLayout}>
             <header className={styles.topbar}>
-                <span className={styles.brand}>Baton</span>
+                <span className={styles.brand}>rcloneGUI</span>
                 {rclone && (
                     <button
                         type="button"

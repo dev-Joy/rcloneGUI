@@ -38,7 +38,7 @@
 아직 확인하지 못한 것
 
 - `\\wsl.localhost` 원본의 속도와 오류 빈도, Linux 파일명 치환(`:` → `：`), 대소문자만 다른 두 파일
-- Google Drive 리모트에서의 `--backup-dir`(`remote:.baton-backup/…`)와 `--fast-list`
+- Google Drive 리모트에서의 `--backup-dir`(`remote:.rclonegui-backup/…`)와 `--fast-list`
 - 원본 폴더 읽기 실패 + `--ignore-errors` (아래 1.60.1 실험 E)의 최신 버전 재확인
 - 종료 코드 4·5의 뜻 (앱 문구는 공식 문서의 일반적인 설명을 따랐다)
 

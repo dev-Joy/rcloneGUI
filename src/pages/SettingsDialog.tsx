@@ -74,7 +74,7 @@ export default function SettingsDialog(iProps: itfSettingsDialogProps) {
 
     /** 파일 선택 창을 띄워 고른 경로를 넘긴다 */
     async function h_PickFile(apply: (path: string) => void) {
-        const file = await unwrap(window.baton.app.pickFile()).catch(() => null);
+        const file = await unwrap(window.rclonegui.app.pickFile()).catch(() => null);
         if (file) apply(file);
     }
 
@@ -116,7 +116,7 @@ export default function SettingsDialog(iProps: itfSettingsDialogProps) {
                 <ZBCField
                     label="rclone.conf 위치 (비워 두면 rclone 기본값)"
                     action={<ZBCButton onClick={() => void h_PickFile(setRcloneConfig)}>파일 선택</ZBCButton>}
-                    hint="Baton은 이 파일을 경로로만 넘기고 내용은 읽거나 기록하지 않습니다."
+                    hint="rcloneGUI는 이 파일을 경로로만 넘기고 내용은 읽거나 기록하지 않습니다."
                 >
                     <ZBCInput
                         aria-label="rclone.conf 위치"
@@ -126,8 +126,8 @@ export default function SettingsDialog(iProps: itfSettingsDialogProps) {
                     />
                 </ZBCField>
                 <div className={styles.hint}>
-                    백업 위치 규칙: 로컬 대상은 같은 드라이브의 <code>.baton-backup\작업ID\실행ID</code>,
-                    리모트 대상은 <code>리모트:.baton-backup/작업ID/실행ID</code>
+                    백업 위치 규칙: 로컬 대상은 같은 드라이브의 <code>.rclonegui-backup\작업ID\실행ID</code>,
+                    리모트 대상은 <code>리모트:.rclonegui-backup/작업ID/실행ID</code>
                 </div>
             </div>
         </ZBCModal>

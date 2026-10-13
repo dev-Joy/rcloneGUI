@@ -1,11 +1,13 @@
 ---
-name: run-baton
-description: Baton 앱을 실제로 띄워 화면까지 확인한다. 화면·IPC·실행기(runner)를 고친 뒤 "앱에서 되는지 확인", "실행해서 보여줘", "스크린샷" 요청이 있을 때, 또는 테스트만으로는 확인되지 않는 변경(스타일, 대화상자, 버튼 상태)을 검증할 때 쓴다.
+name: run-rclonegui
+description: rcloneGUI 앱을 실제로 띄워 화면까지 확인한다. 화면·IPC·실행기(runner)를 고친 뒤 "앱에서 되는지 확인", "실행해서 보여줘", "스크린샷" 요청이 있을 때, 또는 테스트만으로는 확인되지 않는 변경(스타일, 대화상자, 버튼 상태)을 검증할 때 쓴다.
 ---
 
-# Baton 실행해서 확인하기
+<!-- 생성 파일: .claude/skills/run-rclonegui/SKILL.md 에서 scripts/harness/sync-agents.mjs 가 만든다. 직접 고치지 말고 원본을 고친 뒤 pnpm run harness:sync -->
 
-빌드본을 **임시 프로필**로 띄우고 `scripts/dev/drive-app.mjs`로 조작한다. 사용자의 실제 프로필(`%APPDATA%\Baton`)과
+# rcloneGUI 실행해서 확인하기
+
+빌드본을 **임시 프로필**로 띄우고 `scripts/dev/drive-app.mjs`로 조작한다. 사용자의 실제 프로필(`%APPDATA%\rcloneGUI`)과
 실제 작업 폴더는 건드리지 않는다.
 
 ## 순서
@@ -49,10 +51,10 @@ description: Baton 앱을 실제로 띄워 화면까지 확인한다. 화면·IP
   CSS Modules로 해시되므로 선택자로 쓸 수 없다. 글자나 태그(`h1`, `footer`, `tbody tr`)로 찾는다.
 - 삭제가 있는 sync는 확인 창에서 체크해야 [실행]이 켜진다:
   `eval "document.querySelector('.zbcModal .zbcCheckInput').click()"` 다음 `click 실행`.
-- 실제 sync를 돌리면 백업이 **대상 드라이브 최상위**의 `.baton-backup\dev-fixture`에 생긴다. `clean`이 지운다.
+- 실제 sync를 돌리면 백업이 **대상 드라이브 최상위**의 `.rclonegui-backup\dev-fixture`에 생긴다. `clean`이 지운다.
 - 앱 창은 사용자 화면에 실제로 뜬다. 사용자가 그 창을 직접 누르면 결과가 섞일 수 있다.
-- 작업 폴더는 `BATON_DEV_DIR`, 포트는 `BATON_DEV_PORT`(기본 9333)로 바꾼다.
-- rclone이 없으면 버튼이 꺼져 있다. `eval "window.baton.rclone.status()"`로 확인한다.
+- 작업 폴더는 `RCLONEGUI_DEV_DIR`, 포트는 `RCLONEGUI_DEV_PORT`(기본 9333)로 바꾼다.
+- rclone이 없으면 버튼이 꺼져 있다. `eval "window.rclonegui.rclone.status()"`로 확인한다.
 - 개발 모드(`pnpm run dev`)를 조작해야 하면 `electron-vite dev --remoteDebuggingPort 9333`로 띄운다. 이때는 실제 프로필을 쓴다.
 
 ## 보고할 때

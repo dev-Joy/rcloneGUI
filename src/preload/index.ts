@@ -3,7 +3,7 @@
  *
  *  @author Bruce.Cheong    2026-10-11
  *  @description
- *      - contextBridge로 window.baton 함수만 화면에 노출
+ *      - contextBridge로 window.rclonegui 함수만 화면에 노출
  */
 
 /**
@@ -14,14 +14,14 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 /**
  *  Internal imports
  */
-import { CHANNELS, type itfBatonApi } from "@/shared/ipc-contract";
+import { CHANNELS, type itfRcloneGuiApi } from "@/shared/ipc-contract";
 import type { typRunEvent } from "@/shared/types";
 
 /**
  *  Types 정의
  */
 // 화면에는 아래 함수만 열어 준다. ipcRenderer 자체는 넘기지 않는다.
-const api: itfBatonApi = {
+const api: itfRcloneGuiApi = {
     jobs: {
         list: () => ipcRenderer.invoke(CHANNELS.jobsList),
         save: (job) => ipcRenderer.invoke(CHANNELS.jobsSave, job),
@@ -61,4 +61,4 @@ const api: itfBatonApi = {
 /**
  *  메인 클래스 / export 함수
  */
-contextBridge.exposeInMainWorld("baton", api);
+contextBridge.exposeInMainWorld("rclonegui", api);

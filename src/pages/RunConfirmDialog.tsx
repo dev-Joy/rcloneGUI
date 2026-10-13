@@ -69,7 +69,7 @@ export default function RunConfirmDialog(iProps: itfRunConfirmDialogProps) {
         /** 지워질 파일 목록 (copy는 지우지 않으므로 빈 목록) */
         doomed: plannedDeletes(preview) > 0 ? items.filter((item) => item.status === "delete") : [],
         backupText: job.safety.backup
-            ? "지우거나 덮어쓰는 파일은 대상 드라이브의 .baton-backup 폴더로 옮겨 둡니다."
+            ? "지우거나 덮어쓰는 파일은 대상 드라이브의 .rclonegui-backup 폴더로 옮겨 둡니다."
             : "백업이 꺼져 있어 지우거나 덮어쓴 파일은 되돌릴 수 없습니다.",
     };
 

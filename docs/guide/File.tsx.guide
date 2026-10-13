@@ -4,7 +4,7 @@
  *  @author Bruce.Cheong    YYYY-MM-DD  **<- 필수**
  *  @description
  *      - 신규 .ts / .tsx 파일의 구조와 작성 스타일 규격
- *      - Baton은 Electron 앱이라 파일이 속한 프로세스에 따라 쓸 수 있는 것이 다르다
+ *      - rcloneGUI는 Electron 앱이라 파일이 속한 프로세스에 따라 쓸 수 있는 것이 다르다
  *      - 1~2장은 공통, 3장은 화면(renderer) 컴포넌트, 4장은 main/preload/shared 모듈
  */
 
@@ -12,13 +12,13 @@
  *  1. 프로세스 경계 (Electron)
  * ------------------------------------------------------------------
  *  - src/main      : Node + Electron main API 사용 가능. rclone 실행, 파일 저장, IPC 핸들러
- *  - src/preload   : contextBridge로 window.baton 함수만 노출. 로직을 두지 않는다
+ *  - src/preload   : contextBridge로 window.rclonegui 함수만 노출. 로직을 두지 않는다
  *  - src/shared    : 타입 · IPC 계약 · zod 스키마. Node · DOM · electron import 금지
  *  - 화면(renderer): src/renderer(진입점), src/components(공용), src/pages(페이지/레이아웃),
  *                    src/stores, src/lib
  *      - Node API(fs, path, child_process …)와 electron, "@/main/**", "@/preload/**" import 금지
- *      - main과는 window.baton.* 으로만 통신한다 (계약: src/shared/ipc-contract.ts)
- *      - window.baton 응답은 typResult<T> 이므로 unwrap()으로 풀고, 실패는 notify로 알린다
+ *      - main과는 window.rclonegui.* 으로만 통신한다 (계약: src/shared/ipc-contract.ts)
+ *      - window.rclonegui 응답은 typResult<T> 이므로 unwrap()으로 풀고, 실패는 notify로 알린다
  *  - 라우팅: 화면은 file:// 로 열리므로 BrowserRouter(createBrowserRouter)를 쓰지 않는다.
  *            라우터가 필요해지면 HashRouter(createHashRouter)를 쓴다.
  *            (웹 프로젝트 가이드의 RouterProvider / HydrateFallback 항목은 해당 없음)
@@ -85,7 +85,7 @@ export type typJobPageProps2 = {
 };
 
 const propsDefault: itfJobPageProps1 = {
-    title: "Baton",
+    title: "rcloneGUI",
 };
 
 
@@ -126,7 +126,7 @@ export default function JobPage(iProps: itfJobPageProps1 = propsDefault) {
     useEffect(() => {
         // 마운트 시 실행할 로직
         // main 이 보내는 이벤트를 구독했다면 반드시 해제 함수를 돌려준다
-        return window.baton.run.onEvent((event) => {
+        return window.rclonegui.run.onEvent((event) => {
             // ...
         });
     }, []);
@@ -149,10 +149,10 @@ export default function JobPage(iProps: itfJobPageProps1 = propsDefault) {
         // ...
     }
 
-    /** handle 함수 용도 주석 - main 호출은 window.baton 으로만, 실패는 notify 로 */
+    /** handle 함수 용도 주석 - main 호출은 window.rclonegui 으로만, 실패는 notify 로 */
     async function h_Change() {
         try {
-            const jobs: typJob[] = await unwrap(window.baton.jobs.list());
+            const jobs: typJob[] = await unwrap(window.rclonegui.jobs.list());
             // ...
         } catch (error) {
             notify("error", error instanceof Error ? error.message : String(error));

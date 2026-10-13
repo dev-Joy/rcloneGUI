@@ -31,7 +31,7 @@
                             },
                             {
                                 "group": ["node:*", "fs/*", "@/main/**", "@/preload/**"],
-                                "message": "화면은 preload가 열어 준 window.baton만 쓴다 (AGENTS.md 1.5)."
+                                "message": "화면은 preload가 열어 준 window.rclonegui만 쓴다 (AGENTS.md 1.5)."
                             }
                         ]
                     }

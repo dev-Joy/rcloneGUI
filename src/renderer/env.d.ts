@@ -3,13 +3,13 @@
  *
  *  @author Bruce.Cheong    2026-10-11
  *  @description
- *      - 화면 전역 타입. preload가 여는 window.baton을 선언한다.
+ *      - 화면 전역 타입. preload가 여는 window.rclonegui를 선언한다.
  */
 
 /**
  *  Internal imports
  */
-import type { itfBatonApi } from "@/shared/ipc-contract";
+import type { itfRcloneGuiApi } from "@/shared/ipc-contract";
 
 /**
  *  Types 정의
@@ -19,7 +19,7 @@ declare global {
     // eslint-disable-next-line @typescript-eslint/naming-convention
     interface Window {
         /** preload가 contextBridge로 열어 준 함수. 화면이 main과 이야기하는 유일한 통로다. */
-        baton: itfBatonApi;
+        rclonegui: itfRcloneGuiApi;
     }
 }
 

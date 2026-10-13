@@ -1,4 +1,4 @@
-# rclone behaviour probes for Baton on Windows. Re-run after every rclone upgrade and
+# rclone behaviour probes for rcloneGUI on Windows. Re-run after every rclone upgrade and
 # record differences in docs/knowhow/rclone-notes.md.
 # ASCII only: Windows PowerShell 5.1 reads BOM-less scripts as ANSI.
 # Usage: powershell -File scripts/probes/rclone-probes.ps1 -Work <empty work dir>

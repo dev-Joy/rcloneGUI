@@ -24,11 +24,11 @@ import { clsRunStore } from "@/main/store/run-store";
 import type { typJob, typJobInput, typRunEvent, itfRunMeta } from "@/shared/types";
 
 // 실제 rclone으로 임시 폴더만 동기화한다. rclone이 없으면 이유를 남기고 건너뛴다.
-const rclone = await findRclone(process.env.BATON_TEST_RCLONE ?? null);
+const rclone = await findRclone(process.env.RCLONEGUI_TEST_RCLONE ?? null);
 
 if (rclone === null) {
     console.warn(
-        "[baton] rclone을 찾지 못해 통합 테스트를 건너뜁니다. PATH에 넣거나 BATON_TEST_RCLONE을 지정하세요.",
+        "[rclonegui] rclone을 찾지 못해 통합 테스트를 건너뜁니다. PATH에 넣거나 RCLONEGUI_TEST_RCLONE을 지정하세요.",
     );
 }
 
@@ -101,7 +101,7 @@ async function f_Execute(jobId: string, previewRunId: string, confirmedDeletes: 
 
 describe.skipIf(rclone === null)("RcloneRunner + 실제 rclone", () => {
     beforeEach(async () => {
-        work = await mkdtemp(join(tmpdir(), "baton-int-"));
+        work = await mkdtemp(join(tmpdir(), "rclonegui-int-"));
         src = join(work, "원본 src");
         dst = join(work, "대상 dst");
         const old = new Date("2026-10-01T10:00:00+09:00");

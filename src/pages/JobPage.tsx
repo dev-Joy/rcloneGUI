@@ -185,8 +185,8 @@ export default function JobPage(iProps: itfJobPageProps) {
     /** 미리보기 또는 실행 명령을 클립보드에 복사한다 */
     async function h_CopyCommand(which: "preview" | "execute") {
         try {
-            const commands = await unwrap(window.baton.run.command(job.id));
-            await unwrap(window.baton.app.copyText(commands[which]));
+            const commands = await unwrap(window.rclonegui.run.command(job.id));
+            await unwrap(window.rclonegui.app.copyText(commands[which]));
             notify("info", which === "preview" ? "미리보기 명령을 복사했습니다" : "실행 명령을 복사했습니다");
         } catch (error) {
             notify("error", messageOf(error));
@@ -196,7 +196,7 @@ export default function JobPage(iProps: itfJobPageProps) {
     /** 실행의 로그 폴더나 백업 폴더를 탐색기로 연다 */
     async function h_OpenFolder(run: itfRunMeta, target: "runDir" | "backupDir") {
         try {
-            await unwrap(window.baton.app.open({ jobId: run.jobId, runId: run.runId, target }));
+            await unwrap(window.rclonegui.app.open({ jobId: run.jobId, runId: run.runId, target }));
         } catch (error) {
             notify("error", messageOf(error));
         }

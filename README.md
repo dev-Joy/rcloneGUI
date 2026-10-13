@@ -1,4 +1,4 @@
-# Baton
+# rcloneGUI
 
 rclone 기반 폴더 비교·동기화 데스크톱 앱 (Windows). 동기화 엔진은 rclone을 그대로 실행하고,
 앱은 명령 생성 · 미리보기 · 안전장치 · 기록을 맡는다.
@@ -34,13 +34,13 @@ pnpm run dev
 
 - 실제 동기화는 같은 작업의 미리보기 뒤 30분 안에만, 그 미리보기가 가장 최근 실행일 때만 된다.
 - sync에서 삭제가 있으면 목록을 보고 체크해야 실행된다. 실행 때 `--max-delete`를 확인한 수로 고정한다.
-- 지우거나 덮어쓰는 파일은 대상 드라이브의 `.baton-backup\<작업ID>\<실행ID>`로 옮긴다 (기본 켬).
+- 지우거나 덮어쓰는 파일은 대상 드라이브의 `.rclonegui-backup\<작업ID>\<실행ID>`로 옮긴다 (기본 켬).
 - 원본이 없거나 비어 있으면 실행을 막는다. 원본·대상·백업 경로가 겹치면 저장을 거부한다.
 - `--ignore-errors`는 기본 명령에 없고, 백업이 켜진 작업에서만 고급 옵션으로 허용한다.
 
 ## 데이터 위치
 
-`%APPDATA%\Baton\` 아래 `jobs.json`, `settings.json`, `runs\<작업ID>\<실행ID>\{run.json, combined.txt, rclone.jsonl, filter.txt}`.
+`%APPDATA%\rcloneGUI\` 아래 `jobs.json`, `settings.json`, `runs\<작업ID>\<실행ID>\{run.json, combined.txt, rclone.jsonl, filter.txt}`.
 
 ## 문서
 

@@ -1,4 +1,4 @@
-# 0004 작업 정보는 Baton JSON에 두고 필터 파일로 넘긴다
+# 0004 작업 정보는 rcloneGUI JSON에 두고 필터 파일로 넘긴다
 
 - 상태: 채택 (2026-10-11)
 
@@ -8,7 +8,7 @@
 
 ## 결정
 
-- 작업은 `%APPDATA%\Baton\jobs.json`에 둔다. zod 스키마로 읽고 쓴다.
+- 작업은 `%APPDATA%\rcloneGUI\jobs.json`에 둔다. zod 스키마로 읽고 쓴다.
 - 실행할 때 제외 패턴은 실행 폴더의 `filter.txt`(줄마다 `- 패턴`)로 써서 `--filter-from`으로, 나머지는 인자로 넘긴다.
 - 리모트는 기존 rclone.conf를 `--config` 경로로만 참조한다. 앱은 그 파일을 열지 않는다.
 

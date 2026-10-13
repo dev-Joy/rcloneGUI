@@ -1,6 +1,6 @@
 {
-    "name": "baton",
-    "productName": "Baton",
+    "name": "rclonegui",
+    "productName": "rcloneGUI",
     "version": "0.1.0",
     "description": "rclone 기반 폴더 비교·동기화 데스크톱 앱",
     "private": true,

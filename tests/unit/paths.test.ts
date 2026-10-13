@@ -77,20 +77,20 @@ describe("pathsOverlap", () => {
 });
 
 describe("backupRoot / backupDirFor", () => {
-    it("로컬 대상은 같은 드라이브 최상위의 .baton-backup", () => {
-        expect(backupRoot("D:\\backup\\대상 폴더")).toBe("D:\\.baton-backup");
+    it("로컬 대상은 같은 드라이브 최상위의 .rclonegui-backup", () => {
+        expect(backupRoot("D:\\backup\\대상 폴더")).toBe("D:\\.rclonegui-backup");
         expect(backupDirFor("d:/backup/x", "job-a", "20261012-153005")).toBe(
-            "d:\\.baton-backup\\job-a\\20261012-153005",
+            "d:\\.rclonegui-backup\\job-a\\20261012-153005",
         );
     });
 
     it("UNC 대상은 같은 공유 최상위", () => {
-        expect(backupRoot("\\\\server\\share\\a\\b")).toBe("\\\\server\\share\\.baton-backup");
+        expect(backupRoot("\\\\server\\share\\a\\b")).toBe("\\\\server\\share\\.rclonegui-backup");
     });
 
     it("리모트 대상은 같은 리모트 최상위, 구분자는 /", () => {
         expect(backupDirFor("remote-x:My Projects", "job-a", "20261012-153005")).toBe(
-            "remote-x:.baton-backup/job-a/20261012-153005",
+            "remote-x:.rclonegui-backup/job-a/20261012-153005",
         );
     });
 

@@ -1,6 +1,6 @@
 # THIRD_PARTY_NOTICES
 
-Baton이 쓰는 외부 오픈소스. 라이브러리나 폰트를 새로 들일 때마다 이 표에 한 줄을 더한다 (AGENTS.md 작업 원칙).
+rcloneGUI가 쓰는 외부 오픈소스. 라이브러리나 폰트를 새로 들일 때마다 이 표에 한 줄을 더한다 (AGENTS.md 작업 원칙).
 버전과 라이선스는 2026-10-11에 `node_modules/<이름>/package.json`에서 읽은 값이다.
 폰트는 따로 넣지 않고 시스템 글꼴만 쓴다.
 
