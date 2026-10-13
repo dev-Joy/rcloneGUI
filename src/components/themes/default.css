@@ -1,0 +1,53 @@
+/*
+ *  @author Bruce.Cheong 2026-10-11
+ *  @description
+ *      - 기본 테마 변수. 밝은 테마가 기본이고 시스템이 어두운 테마면 값을 바꾼다
+ */
+@layer base {
+    :root {
+        --zbc-bg: #f6f7f9;
+        --zbc-surface: #ffffff;
+        --zbc-surface-2: #eef0f4;
+        --zbc-border: #d9dde5;
+        --zbc-text: #1c2230;
+        --zbc-muted: #667085;
+        --zbc-accent: #2f6fed;
+        --zbc-accent-text: #ffffff;
+        --zbc-add: #1a7f4b;
+        --zbc-add-bg: #e6f5ec;
+        --zbc-change: #b45f06;
+        --zbc-change-bg: #fdf1e0;
+        --zbc-delete: #c62828;
+        --zbc-delete-bg: #fdeaea;
+        --zbc-same: #7a8394;
+        --zbc-same-bg: #eef0f4;
+        --zbc-on-strong: #ffffff;
+        --zbc-backdrop: rgba(10, 14, 22, 0.45);
+        --zbc-shadow: 0 12px 40px rgba(16, 24, 40, 0.22);
+        --zbc-font: "Segoe UI", "Malgun Gothic", system-ui, sans-serif;
+        --zbc-font-mono: Consolas, "D2Coding", monospace;
+        color-scheme: light dark;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --zbc-bg: #15181e;
+            --zbc-surface: #1d2129;
+            --zbc-surface-2: #262b35;
+            --zbc-border: #343a47;
+            --zbc-text: #e6e9ef;
+            --zbc-muted: #9aa3b2;
+            --zbc-accent: #5b8ff5;
+            --zbc-accent-text: #0d1117;
+            --zbc-add: #5fd08f;
+            --zbc-add-bg: #173324;
+            --zbc-change: #f0a94e;
+            --zbc-change-bg: #3a2a14;
+            --zbc-delete: #f47c7c;
+            --zbc-delete-bg: #3d1c1c;
+            --zbc-same: #8b94a5;
+            --zbc-same-bg: #262b35;
+            --zbc-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+        }
+    }
+}

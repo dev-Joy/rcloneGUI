@@ -1,0 +1,57 @@
+/*
+ *  @author Bruce.Cheong 2026-10-11
+ *  @description
+ *      - JobHistoryTable(실행 기록 표) 스타일
+ *      - pages 레이어에 배정되어 components 레이어의 공용 스타일을 특이도 무관하게 오버라이드
+ */
+@layer pages {
+    /* 최상단 클래스 - 컴포넌트명과 동일 */
+    .JobHistoryTable {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        margin: 0 16px;
+        border: 1px solid var(--zbc-border);
+        border-radius: 6px;
+        background: var(--zbc-surface);
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .th {
+            position: sticky;
+            top: 0;
+            text-align: left;
+            font-size: 11px;
+            color: var(--zbc-muted);
+            background: var(--zbc-surface-2);
+            padding: 6px 10px;
+        }
+
+        .td {
+            padding: 5px 10px;
+            border-top: 1px solid var(--zbc-surface-2);
+            white-space: nowrap;
+        }
+
+        .selected .td {
+            background: var(--zbc-surface-2);
+        }
+
+        .message {
+            max-width: 320px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .empty {
+            flex: 1;
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--zbc-muted);
+        }
+    }
+}

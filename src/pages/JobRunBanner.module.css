@@ -1,0 +1,73 @@
+/*
+ *  @author Bruce.Cheong 2026-10-11
+ *  @description
+ *      - JobRunBanner(실행 상태 띠) 스타일
+ *      - pages 레이어에 배정되어 components 레이어의 공용 스타일을 특이도 무관하게 오버라이드
+ */
+@layer pages {
+    /* 최상단 클래스 - 컴포넌트명과 동일 */
+    .JobRunBanner {
+        margin: 0 16px 10px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid var(--zbc-border);
+        background: var(--zbc-surface);
+
+        &.success {
+            background: var(--zbc-add-bg);
+            border-color: var(--zbc-add);
+        }
+
+        &.failed {
+            background: var(--zbc-delete-bg);
+            border-color: var(--zbc-delete);
+        }
+
+        &.canceled {
+            background: var(--zbc-change-bg);
+            border-color: var(--zbc-change);
+        }
+
+        .line {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .errors {
+            margin: 6px 0 0;
+            padding-left: 18px;
+            font-family: var(--zbc-font-mono);
+            font-size: 12px;
+            word-break: break-all;
+        }
+
+        .track {
+            height: 6px;
+            margin-top: 8px;
+            border-radius: 3px;
+            background: var(--zbc-surface-2);
+            overflow: hidden;
+        }
+
+        .bar {
+            height: 100%;
+            background: var(--zbc-accent);
+            transition: width 0.3s;
+        }
+
+        .indeterminate {
+            width: 30%;
+            animation: slide 1.2s infinite ease-in-out;
+        }
+    }
+
+    @keyframes slide {
+        from {
+            transform: translateX(-100%);
+        }
+        to {
+            transform: translateX(340%);
+        }
+    }
+}

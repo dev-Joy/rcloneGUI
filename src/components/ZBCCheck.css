@@ -1,0 +1,21 @@
+/*
+ *  @author Bruce.Cheong 2026-10-11
+ *  @description
+ *      - ZBCCheck(공용 체크박스 · 라디오) 스타일
+ */
+@layer components {
+    .zbcCheck {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .zbcCheckInput {
+        margin-top: 4px;
+        flex-shrink: 0;
+    }
+
+    .zbcCheckDisabled .zbcCheckLabel {
+        opacity: 0.5;
+    }
+}

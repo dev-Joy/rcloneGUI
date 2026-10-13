@@ -1,0 +1,164 @@
+/*
+ *  @author Bruce.Cheong 2026-10-11
+ *  @description
+ *      - JobPage(작업 화면) 스타일
+ *      - pages 레이어에 배정되어 components 레이어의 공용 스타일을 특이도 무관하게 오버라이드
+ */
+@layer pages {
+    /* 최상단 클래스 - 컴포넌트명과 동일 */
+    .JobPage {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+
+        .header {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 2px 12px;
+            padding: 12px 16px 8px;
+        }
+
+        .heading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .title {
+            margin: 0;
+            font-size: 17px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .actions {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .paths {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 8px;
+            color: var(--zbc-muted);
+            font-family: var(--zbc-font-mono);
+            font-size: 12px;
+            min-width: 0;
+        }
+
+        .path {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .arrow {
+            flex-shrink: 0;
+            color: var(--zbc-accent);
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px 10px;
+            flex-wrap: wrap;
+        }
+
+        .gap {
+            flex: 1;
+        }
+
+        .tabs {
+            display: flex;
+            border: 1px solid var(--zbc-border);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .tab {
+            border: 0;
+            background: var(--zbc-surface);
+            padding: 4px 12px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .tabSelected {
+            background: var(--zbc-accent);
+            color: var(--zbc-accent-text);
+            font-weight: 600;
+        }
+
+        .chips {
+            display: flex;
+            gap: 6px;
+            padding: 0 16px 8px;
+        }
+
+        .chip {
+            border: 1px solid var(--zbc-border);
+            border-radius: 999px;
+            padding: 2px 12px;
+            background: var(--zbc-surface);
+            color: var(--zbc-muted);
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .chipOn {
+            font-weight: 600;
+        }
+
+        .chipOn.add {
+            background: var(--zbc-add-bg);
+            color: var(--zbc-add);
+            border-color: var(--zbc-add);
+        }
+
+        .chipOn.change {
+            background: var(--zbc-change-bg);
+            color: var(--zbc-change);
+            border-color: var(--zbc-change);
+        }
+
+        .chipOn.delete,
+        .chipOn.error {
+            background: var(--zbc-delete-bg);
+            color: var(--zbc-delete);
+            border-color: var(--zbc-delete);
+        }
+
+        .chipOn.same {
+            background: var(--zbc-same-bg);
+            color: var(--zbc-text);
+            border-color: var(--zbc-same);
+        }
+
+        .placeholder {
+            flex: 1;
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--zbc-muted);
+        }
+
+        .footer {
+            display: flex;
+            gap: 18px;
+            padding: 6px 16px;
+            font-size: 12px;
+            color: var(--zbc-muted);
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .footerItem {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    }
+}

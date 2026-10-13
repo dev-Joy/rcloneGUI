@@ -1,0 +1,85 @@
+/*
+ *  @author Bruce.Cheong 2026-10-11
+ *  @description
+ *      - AppLayout(앱 전체 틀) 스타일
+ *      - layouts 레이어에 배정되어 components 레이어의 공용 스타일을 특이도 무관하게 오버라이드
+ */
+@layer layouts {
+    /* 최상단 클래스 - 컴포넌트명과 동일 */
+    .AppLayout {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background: var(--zbc-surface);
+            border-bottom: 1px solid var(--zbc-border);
+        }
+
+        .brand {
+            flex: 1;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .rclone {
+            border: 1px solid var(--zbc-border);
+            background: var(--zbc-surface-2);
+            border-radius: 999px;
+            padding: 2px 10px;
+            font-size: 12px;
+            color: var(--zbc-muted);
+            cursor: pointer;
+        }
+
+        .rcloneBad {
+            color: var(--zbc-delete);
+            background: var(--zbc-delete-bg);
+            border-color: var(--zbc-delete);
+        }
+
+        .body {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .empty {
+            flex: 1;
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--zbc-muted);
+        }
+
+        .notice {
+            position: fixed;
+            left: 50%;
+            bottom: 18px;
+            transform: translateX(-50%);
+            max-width: min(720px, calc(100vw - 40px));
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 8px 8px 14px;
+            border-radius: 8px;
+            background: var(--zbc-text);
+            color: var(--zbc-bg);
+            box-shadow: var(--zbc-shadow);
+            z-index: 20;
+        }
+
+        .noticeError {
+            background: var(--zbc-delete);
+            color: var(--zbc-on-strong);
+        }
+
+        .notice :global(.zbcButton) {
+            color: inherit;
+        }
+    }
+}

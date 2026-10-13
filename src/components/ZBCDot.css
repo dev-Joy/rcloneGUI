@@ -1,0 +1,32 @@
+/*
+ *  @author Bruce.Cheong 2026-10-11
+ *  @description
+ *      - ZBCDot(공용 상태 점) 스타일
+ */
+@layer components {
+    .zbcDot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--zbc-border);
+        flex-shrink: 0;
+    }
+
+    .zbcDotSuccess {
+        background: var(--zbc-add);
+    }
+
+    .zbcDotFailed {
+        background: var(--zbc-delete);
+    }
+
+    .zbcDotCanceled {
+        background: var(--zbc-change);
+    }
+
+    .zbcDotRunning,
+    .zbcDotQueued {
+        background: var(--zbc-accent);
+    }
+}

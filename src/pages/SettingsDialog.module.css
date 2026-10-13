@@ -1,0 +1,32 @@
+/*
+ *  @author Bruce.Cheong 2026-10-11
+ *  @description
+ *      - SettingsDialog(설정 대화상자) 스타일
+ *      - pages 레이어에 배정되어 components 레이어의 공용 스타일을 특이도 무관하게 오버라이드
+ */
+@layer pages {
+    /* 최상단 클래스 - 컴포넌트명과 동일 */
+    .SettingsDialog {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+
+        .status {
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 12px;
+            background: var(--zbc-surface-2);
+            word-break: break-all;
+        }
+
+        .statusBad {
+            background: var(--zbc-change-bg);
+            color: var(--zbc-change);
+        }
+
+        .hint {
+            font-size: 12px;
+            color: var(--zbc-muted);
+        }
+    }
+}

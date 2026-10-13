@@ -1,0 +1,14 @@
+/*
+ *  @author Bruce.Cheong 2026-10-11
+ *  @description
+ *      - ZBCInput(공용 한 줄 입력) 스타일
+ */
+@layer components {
+    .zbcInput {
+        width: 100%;
+        border: 1px solid var(--zbc-border);
+        border-radius: 6px;
+        padding: 6px 8px;
+        background: var(--zbc-bg);
+    }
+}

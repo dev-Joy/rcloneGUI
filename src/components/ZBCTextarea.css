@@ -1,0 +1,17 @@
+/*
+ *  @author Bruce.Cheong 2026-10-11
+ *  @description
+ *      - ZBCTextarea(공용 여러 줄 입력) 스타일
+ */
+@layer components {
+    .zbcTextarea {
+        width: 100%;
+        border: 1px solid var(--zbc-border);
+        border-radius: 6px;
+        padding: 6px 8px;
+        background: var(--zbc-bg);
+        font-family: var(--zbc-font-mono);
+        font-size: 12px;
+        resize: vertical;
+    }
+}

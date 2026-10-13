@@ -1,0 +1,84 @@
+/*
+ *  @author Bruce.Cheong 2026-10-11
+ *  @description
+ *      - JobListPane(왼쪽 작업 목록) 스타일
+ *      - pages 레이어에 배정되어 components 레이어의 공용 스타일을 특이도 무관하게 오버라이드
+ */
+@layer pages {
+    /* 최상단 클래스 - 컴포넌트명과 동일 */
+    .JobListPane {
+        width: 250px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        background: var(--zbc-surface);
+        border-right: 1px solid var(--zbc-border);
+
+        .title {
+            padding: 12px 14px 6px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--zbc-muted);
+            letter-spacing: 0.06em;
+        }
+
+        .list {
+            list-style: none;
+            margin: 0;
+            padding: 0 6px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            width: 100%;
+            text-align: left;
+            border: 0;
+            background: none;
+            border-radius: 6px;
+            padding: 8px;
+            cursor: pointer;
+        }
+
+        .item:hover,
+        .selected {
+            background: var(--zbc-surface-2);
+        }
+
+        .selected {
+            box-shadow: inset 3px 0 0 var(--zbc-accent);
+        }
+
+        .item :global(.zbcDot) {
+            margin-top: 6px;
+        }
+
+        .text {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .name {
+            font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sub {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--zbc-muted);
+        }
+
+        .add {
+            margin: 10px;
+        }
+    }
+}

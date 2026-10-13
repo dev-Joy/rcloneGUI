@@ -1,0 +1,39 @@
+/*
+ *  @author Bruce.Cheong 2026-10-11
+ *  @description
+ *      - ZBCBadge(공용 배지) 스타일
+ */
+@layer components {
+    .zbcBadge {
+        border-radius: 4px;
+        padding: 0 6px;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .zbcBadgeAdd {
+        background: var(--zbc-add-bg);
+        color: var(--zbc-add);
+    }
+
+    .zbcBadgeChange {
+        background: var(--zbc-change-bg);
+        color: var(--zbc-change);
+    }
+
+    .zbcBadgeDelete {
+        background: var(--zbc-delete-bg);
+        color: var(--zbc-delete);
+    }
+
+    .zbcBadgeError {
+        background: var(--zbc-delete);
+        color: var(--zbc-on-strong);
+    }
+
+    .zbcBadgeSame {
+        background: var(--zbc-same-bg);
+        color: var(--zbc-same);
+    }
+}

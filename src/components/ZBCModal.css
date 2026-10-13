@@ -1,0 +1,56 @@
+/*
+ *  @author Bruce.Cheong 2026-10-11
+ *  @description
+ *      - ZBCModal(공용 대화상자) 스타일
+ */
+@layer components {
+    .zbcModalWrapper {
+        position: fixed;
+        inset: 0;
+        background: var(--zbc-backdrop);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+    }
+
+    .zbcModal {
+        width: 520px;
+        max-width: calc(100vw - 40px);
+        max-height: calc(100vh - 40px);
+        display: flex;
+        flex-direction: column;
+        background: var(--zbc-surface);
+        border-radius: 10px;
+        box-shadow: var(--zbc-shadow);
+    }
+
+    .zbcModalWide {
+        width: 680px;
+    }
+
+    .zbcModalHeader {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 18px 8px;
+    }
+
+    .zbcModalTitle {
+        margin: 0;
+        font-size: 15px;
+    }
+
+    .zbcModalBody {
+        padding: 4px 18px 12px;
+        overflow-y: auto;
+    }
+
+    .zbcModalFooter {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 12px 18px;
+        border-top: 1px solid var(--zbc-border);
+    }
+}

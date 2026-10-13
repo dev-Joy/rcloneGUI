@@ -1,0 +1,94 @@
+/*
+ *  @author Bruce.Cheong 2026-10-11
+ *  @description
+ *      - JobFileList(3열 비교 목록) 스타일
+ *      - pages 레이어에 배정되어 components 레이어의 공용 스타일을 특이도 무관하게 오버라이드
+ */
+@layer pages {
+    /* 최상단 클래스 - 컴포넌트명과 동일 */
+    .JobFileList {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        margin: 0 16px;
+        border: 1px solid var(--zbc-border);
+        border-radius: 6px;
+        background: var(--zbc-surface);
+        overflow: hidden;
+
+        .head,
+        .row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 130px minmax(0, 1fr);
+            align-items: center;
+            padding: 0 10px;
+            gap: 10px;
+        }
+
+        .head {
+            height: 28px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--zbc-muted);
+            border-bottom: 1px solid var(--zbc-border);
+            background: var(--zbc-surface-2);
+        }
+
+        .headAction {
+            text-align: center;
+        }
+
+        .scroll {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .rows {
+            position: relative;
+        }
+
+        .row {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            border-bottom: 1px solid var(--zbc-surface-2);
+        }
+
+        .row :global(.zbcBadge) {
+            text-align: center;
+            padding: 1px 4px;
+        }
+
+        .path {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-family: var(--zbc-font-mono);
+            font-size: 12px;
+        }
+
+        .missing {
+            color: var(--zbc-muted);
+            opacity: 0.6;
+            font-family: var(--zbc-font);
+            font-style: italic;
+        }
+
+        .same {
+            color: var(--zbc-same);
+        }
+
+        .error .path {
+            color: var(--zbc-delete);
+            font-weight: 700;
+        }
+
+        .empty {
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--zbc-muted);
+        }
+    }
+}

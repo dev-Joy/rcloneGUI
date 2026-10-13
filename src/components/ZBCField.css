@@ -1,0 +1,28 @@
+/*
+ *  @author Bruce.Cheong 2026-10-11
+ *  @description
+ *      - ZBCField(공용 입력 항목 틀) 스타일
+ */
+@layer components {
+    .zbcField {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .zbcFieldLabel {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--zbc-muted);
+    }
+
+    .zbcFieldRow {
+        display: flex;
+        gap: 6px;
+    }
+
+    .zbcFieldHint {
+        font-size: 12px;
+        color: var(--zbc-muted);
+    }
+}
