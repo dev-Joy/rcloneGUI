@@ -1,7 +1,7 @@
 /**
  *  ZBC textarea
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 공용 여러 줄 입력
  *      - 패턴 목록처럼 고정폭 글꼴이 필요한 곳에 사용

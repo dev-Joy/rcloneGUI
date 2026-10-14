@@ -1,7 +1,7 @@
 /**
  *  Ipc contract
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - IPC 채널 이름과 window.rclonegui API 계약
  */

@@ -1,7 +1,7 @@
 /**
  *  Json log
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - rclone --use-json-log 출력 파서
  */

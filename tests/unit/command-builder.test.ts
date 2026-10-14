@@ -1,7 +1,7 @@
 /**
  *  Command builder test
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 명령 생성 규칙과 차단 목록 테스트
  */

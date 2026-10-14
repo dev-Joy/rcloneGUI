@@ -1,7 +1,7 @@
 /**
  *  Job run banner
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 실행 상태 띠
  *      - 실행 중에는 진행률을, 끝난 뒤에는 결과와 오류를 보여준다

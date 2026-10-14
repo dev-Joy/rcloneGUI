@@ -1,7 +1,7 @@
 /**
  *  Job store
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 작업 저장소 (jobs.json)와 저장 전 검증
  */

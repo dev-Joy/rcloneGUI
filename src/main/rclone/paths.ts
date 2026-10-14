@@ -1,7 +1,7 @@
 /**
  *  Paths
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 경로 해석과 겹침 검사, 백업 폴더 규칙 (순수 함수)
  */

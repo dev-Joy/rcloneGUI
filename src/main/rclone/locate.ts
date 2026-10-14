@@ -1,7 +1,7 @@
 /**
  *  Locate
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - rclone 실행 파일 탐지, 버전·필수 기능 확인, 리모트 목록
  */

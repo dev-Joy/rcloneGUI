@@ -1,7 +1,7 @@
 /**
  *  Types
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - main과 renderer가 함께 쓰는 타입과 작은 계산 함수
  */

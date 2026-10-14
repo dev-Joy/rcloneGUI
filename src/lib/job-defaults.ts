@@ -1,7 +1,7 @@
 /**
  *  Job defaults
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 새 작업과 복제 작업의 초깃값
  */

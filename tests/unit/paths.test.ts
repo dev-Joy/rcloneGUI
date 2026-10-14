@@ -1,7 +1,7 @@
 /**
  *  Paths test
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 경로 해석·겹침 검사·백업 경로 테스트
  */

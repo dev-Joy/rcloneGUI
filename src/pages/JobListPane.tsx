@@ -1,7 +1,7 @@
 /**
  *  Job list pane
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 왼쪽 작업 목록
  *      - 이름, 모드, 마지막 실행 결과를 보여준다

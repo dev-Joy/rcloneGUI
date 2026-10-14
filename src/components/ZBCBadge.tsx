@@ -1,7 +1,7 @@
 /**
  *  ZBC badge
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 공용 배지
  *      - 파일 상태 색(추가 · 변경 · 삭제 · 오류 · 같음)을 그대로 쓴다

@@ -1,7 +1,7 @@
 /**
  *  ZBC modal
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 공용 대화상자
  *      - Esc와 닫기 버튼으로 닫는다

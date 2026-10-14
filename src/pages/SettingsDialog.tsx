@@ -1,7 +1,7 @@
 /**
  *  Settings dialog
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 설정 대화상자
  *      - rclone.exe와 rclone.conf 위치를 정한다

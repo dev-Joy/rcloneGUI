@@ -1,7 +1,7 @@
 /**
  *  Run confirm dialog
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 실행 전 확인 대화상자
  *      - 삭제가 있으면 목록을 보여주고 체크해야만 실행할 수 있다

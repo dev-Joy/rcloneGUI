@@ -1,7 +1,7 @@
 /**
  *  Helpers
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 단위 테스트 공용 도우미
  */

@@ -1,7 +1,7 @@
 /**
  *  Job editor dialog
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 작업 편집 대화상자
  *      - 원본 · 대상, 모드, 제외 패턴, 옵션, 안전장치를 고친다

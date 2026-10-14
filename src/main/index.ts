@@ -1,7 +1,7 @@
 /**
  *  Index
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - Electron main 진입점. 창 생성, 저장소·실행기 조립, IPC 등록
  */

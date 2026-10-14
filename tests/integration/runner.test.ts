@@ -1,7 +1,7 @@
 /**
  *  Runner test
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 실제 rclone과 임시 폴더로 하는 실행기 통합 테스트
  */

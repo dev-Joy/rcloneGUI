@@ -1,7 +1,7 @@
 /**
  *  ZBC button
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 공용 버튼
  *      - 기본 · 강조 · 위험 · 링크 · 아이콘 모양과 작은 크기를 지원

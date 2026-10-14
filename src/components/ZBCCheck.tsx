@@ -1,7 +1,7 @@
 /**
  *  ZBC check
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 공용 체크박스 · 라디오
  *      - 글자를 눌러도 선택된다

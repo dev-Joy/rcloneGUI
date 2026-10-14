@@ -1,7 +1,7 @@
 /**
  *  Job page
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 작업 하나의 화면
  *      - 비교 · 동기화 · 중지, 상태 칩 필터, 비교 목록과 실행 기록을 보여준다

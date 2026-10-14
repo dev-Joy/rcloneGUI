@@ -1,7 +1,7 @@
 /**
  *  TypeScript/React File Guide (Electron)
  *
- *  @author Bruce.Cheong    YYYY-MM-DD  **<- 필수**
+ *  @author dev-Joy    YYYY-MM-DD  **<- 필수**
  *  @description
  *      - 신규 .ts / .tsx 파일의 구조와 작성 스타일 규격
  *      - rcloneGUI는 Electron 앱이라 파일이 속한 프로세스에 따라 쓸 수 있는 것이 다르다
@@ -31,7 +31,7 @@
  *  - 들여쓰기 공백 4칸, 문자열은 "" 기본
  *  - 접두사: type -> typ, interface -> itf, class -> cls, 내부 함수 -> f_, handle 함수 -> h_
  *  - import: 상위 폴더는 "@/" (= src), 같은 폴더와 하위 폴더는 "./"
- *  - 파일 최상단 JSDoc: 제목 / @author Bruce.Cheong YYYY-MM-DD (필수) / @description
+ *  - 파일 최상단 JSDoc: 제목 / @author dev-Joy YYYY-MM-DD (필수) / @description
  *  - import 는 External imports, Internal imports 두 블록으로 나눈다
  *  - any 금지. 외부 입력은 unknown 으로 받아 zod 로 파싱한다
  * ------------------------------------------------------------------ */
@@ -45,7 +45,7 @@
 /**
  *  Job page
  *
- *  @author Bruce.Cheong    YYYY-MM-DD  **<- 필수**
+ *  @author dev-Joy    YYYY-MM-DD  **<- 필수**
  *  @description
  *      - 작업 하나의 비교 결과와 실행 버튼을 보여주는 페이지
  *
@@ -177,7 +177,7 @@ export default function JobPage(iProps: itfJobPageProps1 = propsDefault) {
 /**
  *  Run store
  *
- *  @author Bruce.Cheong    YYYY-MM-DD  **<- 필수**
+ *  @author dev-Joy    YYYY-MM-DD  **<- 필수**
  *  @description
  *      - 실행 기록을 runs/<jobId>/<runId> 폴더에 저장
  *

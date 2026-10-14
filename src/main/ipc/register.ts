@@ -1,7 +1,7 @@
 /**
  *  Register
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - IPC 핸들러 등록. 입력을 zod로 검증하고 서비스를 호출
  */

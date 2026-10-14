@@ -1,7 +1,7 @@
 /**
  *  Command builder
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 작업을 rclone 인자 배열로 바꾸고 위험 옵션을 차단
  */

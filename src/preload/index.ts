@@ -1,7 +1,7 @@
 /**
  *  Index
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - contextBridge로 window.rclonegui 함수만 화면에 노출
  */

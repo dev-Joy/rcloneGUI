@@ -1,7 +1,7 @@
 /**
  *  ZBC field
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 공용 입력 항목 틀
  *      - 이름표, 입력(과 옆 버튼), 도움말을 세로로 놓는다

@@ -1,7 +1,7 @@
 /**
  *  Settings store
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 앱 설정 저장소 (settings.json)
  */

@@ -1,7 +1,7 @@
 /**
  *  App layout
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 앱 전체 틀이자 메인 윈도우의 최상위 컴포넌트
  *      - 상단 바, 작업 목록, 작업 화면, 안내와 대화상자를 놓는다

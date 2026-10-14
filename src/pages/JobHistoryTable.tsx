@@ -1,7 +1,7 @@
 /**
  *  Job history table
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 작업별 실행 기록 표
  *      - 그때의 파일 목록, 로그 폴더, 백업 폴더로 갈 수 있다

@@ -1,7 +1,7 @@
 /**
  *  Combined
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - rclone --combined 출력 파서
  */

@@ -1,7 +1,7 @@
 /**
  *  Job file list
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 원본 · 일어날 일 · 대상 3열 비교 목록
  *      - 수만 줄도 보이는 줄만 그린다 (가상 스크롤)

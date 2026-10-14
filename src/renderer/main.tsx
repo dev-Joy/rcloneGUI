@@ -1,7 +1,7 @@
 /**
  *  Main
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 화면 진입점. 공용 스타일을 올리고 AppLayout을 그린다.
  */

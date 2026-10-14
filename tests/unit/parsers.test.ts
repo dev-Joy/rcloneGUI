@@ -1,7 +1,7 @@
 /**
  *  Parsers test
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - combined·JSON 로그 파서 테스트 (실제 rclone 출력 fixture)
  */

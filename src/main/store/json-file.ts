@@ -1,7 +1,7 @@
 /**
  *  Json file
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - JSON 파일 읽기와 원자적 쓰기
  */

@@ -1,7 +1,7 @@
 /**
  *  Runner
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - rclone을 띄우는 유일한 곳. 미리보기·실행·취소·실행 큐
  */

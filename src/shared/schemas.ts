@@ -1,7 +1,7 @@
 /**
  *  Schemas
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 작업·설정·IPC 입력을 검증하는 zod 스키마
  */

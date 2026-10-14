@@ -1,7 +1,7 @@
 /**
  *  App store
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 화면 전체 상태 (작업, 선택, 실행 진행, 안내). main과는 window.rclonegui로만 이야기한다.
  */

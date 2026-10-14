@@ -1,7 +1,7 @@
 /**
  *  Env
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 화면 전역 타입. preload가 여는 window.rclonegui를 선언한다.
  */

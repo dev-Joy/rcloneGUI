@@ -1,7 +1,7 @@
 /**
  *  Format
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 화면에 쓰는 숫자·시각·상태 문구 변환
  */

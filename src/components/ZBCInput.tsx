@@ -1,7 +1,7 @@
 /**
  *  ZBC input
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 공용 한 줄 입력
  *      - 값이 바뀌면 문자열을 그대로 넘긴다

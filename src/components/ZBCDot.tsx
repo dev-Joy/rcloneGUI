@@ -1,7 +1,7 @@
 /**
  *  ZBC dot
  *
- *  @author Bruce.Cheong    2026-10-11
+ *  @author dev-Joy    2026-10-11
  *  @description
  *      - 공용 상태 점
  *      - 실행 결과를 색으로 보여준다
