@@ -118,9 +118,13 @@ async function f_IsMissingDirectory(path: string): Promise<boolean> {
 
 /** lsjson 하나를 띄워 stdout을 파일로 받는다. 종료 코드를 돌려준다 (시작하지 못하면 null). */
 function f_RunList(run: itfActiveRun, exe: string, args: string[], outFile: string): Promise<number | null> {
+    // 띄우기 직전에 차단 목록을 한 번 더 본다 (만들 때도 검사했다). 걸리면 읽기 실패로 본다 — 미리보기는 그대로 둔다.
+    try {
+        assertSafeArgs(args);
+    } catch {
+        return Promise.resolve(null);
+    }
     const out = createWriteStream(outFile);
-    // 띄우기 직전에 차단 목록을 한 번 더 본다 (만들 때도 검사했다).
-    assertSafeArgs(args);
     const child = spawn(exe, args, { shell: false, windowsHide: true });
     run.listChildren.push(child);
     child.stdout.pipe(out);
@@ -148,8 +152,13 @@ function f_RunList(run: itfActiveRun, exe: string, args: string[], outFile: stri
 
 /** 짧은 rclone 명령(about)을 띄워 stdout을 문자열로 받는다. 실패 · 시간 초과(30초)면 null. 취소하면 함께 끝낸다 (F20) */
 function f_RunCapture(run: itfActiveRun, exe: string, args: string[]): Promise<string | null> {
-    return new Promise((resolve) => {
+    // 띄우기 직전 재검사. 걸리면 그쪽 용량만 "확인 불가"로 본다.
+    try {
         assertSafeArgs(args);
+    } catch {
+        return Promise.resolve(null);
+    }
+    return new Promise((resolve) => {
         const child = spawn(exe, args, { shell: false, windowsHide: true, timeout: ABOUT_TIMEOUT_MS });
         run.listChildren.push(child);
         let out = "";
