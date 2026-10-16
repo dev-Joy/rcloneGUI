@@ -241,6 +241,26 @@ describe.skipIf(rclone === null)("RcloneRunner + 실제 rclone", () => {
         }
     });
 
+    it("설정에 없는 리모트로 비교하면 rclone의 critical 줄을 읽어 그 이름을 알려 준다", async () => {
+        // 사용자의 rclone.conf를 읽지 않도록 빈 설정 파일을 쓴다
+        const emptyConfig = join(work, "empty.conf");
+        await writeFile(emptyConfig, "", "utf8");
+        const job = await f_SaveJob({ dest: "nosuchremote:폴더", rcloneConfig: emptyConfig });
+        const preview = await f_Preview(job.id);
+        expect(preview.status).toBe("failed");
+        expect(preview.message).toBe(
+            'rclone 설정에 "nosuchremote" 리모트가 없습니다. rclone config로 만든 리모트 이름을 쓰세요',
+        );
+    });
+
+    it("cancelAll은 대기 · 실행 중인 rclone을 모두 멈춘다 (앱이 끝날 때)", async () => {
+        const a = await f_SaveJob();
+        const runId = await runner.preview(a.id);
+        runner.cancelAll();
+        expect(await runner.wait(runId)).toMatchObject({ status: "canceled" });
+        runner.cancelAll(); // 도는 것이 없어도 문제없다
+    });
+
     it("미리보기 뒤 양쪽 크기 · 수정 시각을 붙인다 (F11)", async () => {
         const job = await f_SaveJob();
         const meta = await f_Preview(job.id);

@@ -387,6 +387,14 @@ export class clsRcloneRunner {
         }
     }
 
+    /**
+     * 대기 · 실행 중인 rclone을 모두 멈춘다. 앱이 끝날 때 부른다.
+     * Windows에서는 앱이 꺼져도 자식 rclone이 남아 계속 돌기 때문이다. 기록은 다음에 켤 때 "중단됨"으로 닫힌다.
+     */
+    cancelAll(): void {
+        for (const runId of [...this.active.keys()]) this.cancel(runId);
+    }
+
     /** 실행이 끝나 기록이 저장될 때까지 기다린다 (테스트·체인용). */
     async wait(runId: string): Promise<itfRunMeta | null> {
         return (await this.active.get(runId)?.finished) ?? null;
@@ -564,7 +572,11 @@ export class clsRcloneRunner {
                     transferBytes = parsed.progress.totalBytes;
                     this.deps.emit({ runId, jobId, type: "progress", payload: parsed.progress });
                 }
-                if (parsed.level === "error" && errors.length < MAX_KEPT_ERRORS) {
+                // 설정에 없는 리모트처럼 시작부터 실패하면 rclone은 critical로 남긴다
+                if (
+                    (parsed.level === "error" || parsed.level === "critical") &&
+                    errors.length < MAX_KEPT_ERRORS
+                ) {
                     errors.push(formatErrorLine(parsed));
                 }
                 const dirOp = dirOpOf(parsed);

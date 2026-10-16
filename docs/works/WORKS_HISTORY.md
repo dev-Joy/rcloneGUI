@@ -285,7 +285,10 @@
 - 수정 1: 리모트 대상 폴더가 없을 때 lsjson exit 3을 빈 목록으로(readDetails · computeExcluded). 통합 테스트는 환경 변수 local 백엔드 리모트로 재현(고치기 전 실패 확인)
 - 수정 2: `clsRunStore.closeInterrupted` — 앱이 켜질 때 대기 · 실행 중 기록을 실패로 닫음(실제 동기화는 "일부 파일만 바뀌었을 수 있음"). 사용자가 누른 Drive 동기화 도중 빌드하려고 앱을 꺼서 드러남
 - 수정 3: 사용자가 대상 칸에 Drive 웹 주소를 넣어 rclone이 "https" 리모트를 찾지 못함 → pathSchema가 웹 주소를 거부, describeExit가 "설정에 없는 리모트"를 풀어 씀
-- 남은 것: 공용 client_id 종료 예고(자기 client_id로 리모트 재생성 필요), Drive 쪽 백업 폴더 · fast-list 미확인. 별도 reviewer · app-verifier 루프는 돌리지 않음(버그 수정 2건, 단위 · 통합 테스트와 실제 앱으로 확인)
+- 사용자 지적(".claude · AGENTS.md 참고하는 거 아니었어?")으로 수정 1~3을 검증 루프에 올림. R1: reviewer REJECTED — 웹 주소 거부를 읽기용 pathSchema에 넣어 예전에 웹 주소로 저장된 작업이 하나라도 있으면 목록 전체가 열리지 않음. app-verifier REJECTED — rclone은 설정에 없는 리모트를 critical로 남기는데 errors는 error만 모아 안내가 나오지 않음, 앱이 꺼져도 rclone이 남아 계속 돌 수 있음
+- R2 수정: 웹 주소 확인을 저장 때(validateJobPaths, PATH_IS_WEB_ADDRESS)로 옮기고 http · https · ftp · file만 막음(예전 작업 목록 테스트), errors에 critical 포함, 앱이 끝날 때 runner.cancelAll()
+- R2: app-verifier APPROVED(설정에 없는 리모트 안내, 창 닫기 · 강제 종료 모두 rclone이 남지 않음, 웹 주소 저장 거부, 회귀 없음). reviewer R2 REJECTED — rclone-notes(critical 줄) · CHANGELOG(앱 종료 시 rclone 멈춤) 누락 → R3 채움 + 통합 테스트가 빈 임시 rclone.conf 사용 → reviewer R3 APPROVED
+- 남은 것: 공용 client_id 종료 예고(자기 client_id로 리모트 재생성 필요), 중단된 실행이 대상에 *.partial을 남겨 다음 비교에서 삭제 대상으로 보임, jobs.save 동시 호출 시 나중 쓰기가 덮음(화면에서는 안 생김), 알림 영역 [종료] 경로는 화면으로 못 봄, Drive 쪽 백업 폴더 · fast-list 미확인, 실패 · 중단된 실행 목록이 모든 항목을 과거형("복사함")으로 보임(이전부터), 중단 기록의 걸린 시간은 다시 켠 시각까지
 
 ## Error
 

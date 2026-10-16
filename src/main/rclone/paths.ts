@@ -39,6 +39,14 @@ export function parseLocation(raw: string): typLocation {
     return { kind: "local", path: value };
 }
 
+/**
+ * 웹 주소인지 (https://drive.google.com/… 등). rclone은 이것을 "https"라는 리모트로 읽어 실패한다.
+ * 저장할 때만 막는다(validateJobPaths). 예전에 저장된 작업도 읽을 수 있어야 열어서 고칠 수 있다.
+ */
+export function isWebAddress(raw: string): boolean {
+    return /^(https?|ftps?|file):\/\//i.test(raw.trim());
+}
+
 export function isRemote(raw: string): boolean {
     return parseLocation(raw).kind === "remote";
 }

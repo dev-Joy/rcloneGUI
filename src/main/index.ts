@@ -250,6 +250,8 @@ if (!app.requestSingleInstanceLock()) {
         app.on("will-quit", () => {
             clearInterval(trayTimer);
             scheduler.stop();
+            // 앱과 함께 rclone도 끝낸다. 남겨 두면 기록은 "중단됨"인데 대상은 계속 바뀐다.
+            runner.cancelAll();
         });
 
         app.on("activate", () => {

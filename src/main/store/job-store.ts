@@ -17,7 +17,7 @@ import { z } from "zod";
  */
 import { jobSchema } from "@/shared/schemas";
 import type { typJob, typJobInput } from "@/shared/types";
-import { backupRoot, isRemote, pathsOverlap } from "@/main/rclone/paths";
+import { backupRoot, isRemote, isWebAddress, pathsOverlap } from "@/main/rclone/paths";
 import type { clsAppDatabase } from "./app-database";
 
 /**
@@ -48,6 +48,12 @@ export class clsJobError extends Error {
 
 /** 원본·대상·백업 경로가 서로 포함 관계인지 검사한다. 문제가 있으면 던진다. */
 export function validateJobPaths(job: Pick<typJob, "source" | "dest" | "safety">): void {
+    if (isWebAddress(job.source) || isWebAddress(job.dest)) {
+        throw new clsJobError(
+            "PATH_IS_WEB_ADDRESS",
+            "웹 주소는 쓸 수 없습니다. rclone 리모트 이름으로 쓰세요 (예: 리모트이름:폴더)",
+        );
+    }
     if (pathsOverlap(job.source, job.dest)) {
         throw new clsJobError("PATHS_OVERLAP", "원본과 대상이 같거나 서로 포함합니다");
     }

@@ -37,8 +37,6 @@ describe("jobSchema", () => {
         ["옵션처럼 보이는 원본", { source: "--delete-excluded" }],
         ["줄바꿈이 든 대상", { dest: "D:\\a\nb" }],
         ["줄바꿈이 든 제외 패턴", { excludes: ["a\n+ **"] }],
-        ["웹 주소 대상", { dest: "https://drive.example.com/drive/folders/abc" }],
-        ["웹 주소 원본", { source: "HTTP://example.com/x" }],
         ["경로 탈출을 노린 ID", { id: "..\\..\\x" }],
         [
             "0 이하 checkers",
@@ -142,6 +140,18 @@ describe("validateJobPaths", () => {
         ).toBe("OK");
     });
 
+    it("웹 주소는 저장할 때 거부하고, 리모트 · 드라이브 경로는 통과", () => {
+        const f_Dest = (dest: string) => f_Code(() => validateJobPaths(makeJob({ dest })));
+        expect(f_Dest("https://drive.example.com/drive/folders/abc")).toBe("PATH_IS_WEB_ADDRESS");
+        expect(f_Code(() => validateJobPaths(makeJob({ source: " HTTP://example.com/x" })))).toBe(
+            "PATH_IS_WEB_ADDRESS",
+        );
+        expect(f_Dest("file:///C:/x")).toBe("PATH_IS_WEB_ADDRESS");
+        expect(f_Dest("remote-x:Backup")).toBe("OK");
+        expect(f_Dest("remote-x://odd/path")).toBe("OK");
+        expect(f_Dest("D://backup")).toBe("OK");
+    });
+
     it("원본과 대상이 같거나 포함 관계면 거부", () => {
         expect(f_Code(() => validateJobPaths(makeJob({ source: "C:\\a", dest: "C:\\a\\b" })))).toBe(
             "PATHS_OVERLAP",
@@ -203,6 +213,26 @@ describe("작업·실행 저장소 (임시 폴더)", () => {
         ...makeJob({ name: "Temp Job", source: join(dir, "src"), dest: join(dir, "dst") }),
         id: "",
         ...patch,
+    });
+
+    it("예전에 웹 주소로 저장된 작업이 있어도 목록은 열리고, 다시 저장할 때만 거부한다", async () => {
+        const store = new clsJobStore(db);
+        const saved = await store.save(f_Input());
+        const legacy = {
+            ...saved,
+            id: "legacy-web",
+            name: "예전 작업",
+            dest: "https://drive.example.com/drive/folders/abc",
+        };
+        db.db
+            .prepare("INSERT INTO jobs (id, position, data) VALUES (?, 1, ?)")
+            .run(legacy.id, JSON.stringify(legacy));
+        const reopened = new clsJobStore(db);
+        expect((await reopened.list()).map((j) => j.id)).toEqual([saved.id, "legacy-web"]);
+        await expect(reopened.save(legacy)).rejects.toMatchObject({ code: "PATH_IS_WEB_ADDRESS" });
+        expect((await reopened.save({ ...legacy, dest: join(dir, "dst-fixed") })).dest).toBe(
+            join(dir, "dst-fixed"),
+        );
     });
 
     it("저장한 작업은 새 저장소 인스턴스에서도 읽힌다", async () => {
