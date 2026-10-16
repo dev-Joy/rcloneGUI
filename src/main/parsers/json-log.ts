@@ -30,6 +30,10 @@ const statsSchema = z.object({
     errors: z.number().catch(0),
     eta: z.number().nullable().catch(null),
     speed: z.number().catch(0),
+    // 지난 초. 평균 속도 계산에 쓴다
+    elapsedTime: z.number().catch(0),
+    // 전송 중인 파일. 100%면 리모트가 마무리하는 중이다 (Drive는 업로드 뒤 서버 처리를 기다린다)
+    transferring: z.array(z.object({ percentage: z.number().catch(0) })).catch([]),
 });
 
 const lineSchema = z.object({
@@ -71,7 +75,10 @@ export function parseLogLine(line: string): itfLogLine | null {
     const parsed = lineSchema.safeParse(raw);
     if (!parsed.success) return null;
     const { level, msg, object, skipped, stats } = parsed.data;
-    return { level, msg, object, skipped, progress: stats };
+    if (!stats) return { level, msg, object, skipped, progress: undefined };
+    const { elapsedTime, transferring, ...rest } = stats;
+    const finishing = transferring.filter((file) => file.percentage >= 100).length;
+    return { level, msg, object, skipped, progress: { ...rest, elapsed: elapsedTime, finishing } };
 }
 
 /**

@@ -4,6 +4,7 @@
  *  @author dev-Joy    2026-10-11
  *  @description
  *      - combined·JSON 로그 파서 테스트 (실제 rclone 출력 fixture)
+ *      - log-d-drive-stats.jsonl만 probe가 아니라 앱으로 Google Drive에 올린 실제 실행 로그의 stats 줄이다(파일 이름 · 경로만 바꿈)
  */
 
 /**
@@ -27,9 +28,10 @@ import { createLineSplitter, dirOpOf, formatErrorLine, parseLogLine } from "@/ma
 import { parseAbout } from "@/main/parsers/about";
 import { parseLsjson } from "@/main/parsers/lsjson";
 import { describeExit } from "@/main/rclone/runner";
+import { averageRate } from "@/lib/format";
 import { isDestNewer, isDestTooSmall, type itfFileItem } from "@/shared/types";
 
-// fixtures는 rclone v1.75.1 (Windows)에서 scripts/probes/rclone-probes.ps1로 받은 실제 출력이다.
+// fixtures는 rclone v1.75.1 (Windows)에서 scripts/probes/rclone-probes.ps1로 받은 실제 출력이다. log-d-drive-stats.jsonl만 앱 실행 로그에서 왔다.
 const f_Fixture = (name: string): string => readFileSync(join(__dirname, "../fixtures", name), "utf8");
 
 describe("parseCombinedLine", () => {
@@ -120,7 +122,26 @@ describe("parseLogLine", () => {
             errors: 0,
             eta: null,
             speed: 0,
+            finishing: 0,
         });
+        expect(stats?.elapsed).toBeGreaterThan(0);
+    });
+
+    it("Drive 업로드: 지난 시간과 마무리 중인 파일 수를 읽고, 평균으로 남은 시간을 다시 계산한다 (log-d)", () => {
+        const stats = f_Fixture("log-d-drive-stats.jsonl")
+            .split("\n")
+            .filter(Boolean)
+            .map((l) => parseLogLine(l)?.progress);
+        // 179초 시점: rclone의 순간 속도는 5 KB/s, eta는 68252초(19시간)였다
+        const stalled = stats[1]!;
+        expect(stalled).toMatchObject({ bytes: 168044512, totalBytes: 517054771, finishing: 3, eta: 68252 });
+        expect(stalled.speed).toBeLessThan(10_000);
+        const rate = averageRate(stalled);
+        expect(rate.speed).toBeGreaterThan(900_000);
+        expect(rate.eta).toBeGreaterThan(300);
+        expect(rate.eta).toBeLessThan(450);
+        expect(stats[0]!.finishing).toBe(2);
+        expect(stats[2]!.finishing).toBe(4);
     });
 
     it("삭제 한도 오류 줄을 error 수준과 대상 파일로 읽는다", () => {

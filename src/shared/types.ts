@@ -184,8 +184,12 @@ export interface itfProgress {
     errors: number;
     /** 남은 초. 모르면 null */
     eta: number | null;
-    /** 초당 바이트 */
+    /** 초당 바이트 (rclone의 최근 몇 초 기준. 화면에는 쓰지 않고 평균을 쓴다) */
     speed: number;
+    /** 시작부터 지난 초. 모르면 0 */
+    elapsed: number;
+    /** 다 보내고 리모트가 마무리하기를 기다리는 파일 수 (전송 중 100%) */
+    finishing: number;
 }
 
 export type typRunEvent =

@@ -290,6 +290,16 @@
 - R2: app-verifier APPROVED(설정에 없는 리모트 안내, 창 닫기 · 강제 종료 모두 rclone이 남지 않음, 웹 주소 저장 거부, 회귀 없음). reviewer R2 REJECTED — rclone-notes(critical 줄) · CHANGELOG(앱 종료 시 rclone 멈춤) 누락 → R3 채움 + 통합 테스트가 빈 임시 rclone.conf 사용 → reviewer R3 APPROVED
 - 남은 것: 공용 client_id 종료 예고(자기 client_id로 리모트 재생성 필요), 중단된 실행이 대상에 *.partial을 남겨 다음 비교에서 삭제 대상으로 보임, jobs.save 동시 호출 시 나중 쓰기가 덮음(화면에서는 안 생김), 알림 영역 [종료] 경로는 화면으로 못 봄, Drive 쪽 백업 폴더 · fast-list 미확인, 실패 · 중단된 실행 목록이 모든 항목을 과거형("복사함")으로 보임(이전부터), 중단 기록의 걸린 시간은 다시 켠 시각까지
 
+### [TASK_029] : (2026-10-17) [진행 표시 평균 속도 · 남은 시간]
+
+- 명세: `docs/specs/2026-10-17-average-progress.md`. 사용자 Drive 동기화에서 "5.7 KB/s · 남은 시간 16시간"을 보고 질문
+- 원인: rclone stats.speed · eta는 최근 몇 초 기준. Drive가 큰 파일을 100%에서 마무리하는 동안 bytes가 멈춰 0에 가깝게 떨어짐(실제 로그 확인, 평균은 0.7~2.3 MB/s, 오류 · rate limit 없음)
+- 파서가 elapsedTime · transferring[].percentage를 읽어 `elapsed` · `finishing`, `averageRate`(순수 함수), 진행 줄 "평균 … /s · 남은 시간 약 … · 리모트가 파일 N개를 마무리하는 중"
+- fixture `log-d-drive-stats.jsonl`: 사용자 실제 실행 로그의 stats 3줄, 파일 이름 · srcFs · dstFs를 지움
+- 테스트: 파서(log-d · log-a), averageRate 경계값
+- R1: reviewer REJECTED — WORKS.md 줄이 스크립트 실수로 깨짐(+ fixture 시각을 손으로 바꿈, 출처 주석). app-verifier R1은 사용량 한도로 끊김(남은 시험 파일 4.8GB 정리). R2: reviewer REJECTED — WORKS.md 꼬리가 남음. R3: reviewer APPROVED. app-verifier R2 APPROVED(25MB/s 제한에서 평균 25 MB/s, 남은 시간이 실제와 1초 단위로 맞음, 끝날 때 값이 튀지 않음, 886 · 720 · 600px 잘림 없음)
+- 남은 것: 미리보기(dry-run)도 bytes를 보고해 1초 넘게 걸리는 미리보기(리모트 등)에서 '평균 … /s · 남은 시간'이 보일 수 있음(재현 못 함), 좁은 창에서 '남은 시간 약' / '25초'처럼 묶음 중간에서 줄이 바뀜, '마무리하는 중' 안내는 화면에서 못 봄(로컬은 100% 파일이 생기지 않음, fixture로만 확인)
+
 ## Error
 
 ### [ERR_001] : (2026-10-11) oxlint `no-restricted-imports`의 `group: ["../*"]`가 `../lib/format`을 못 잡음 → TASK_003

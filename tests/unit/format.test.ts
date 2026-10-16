@@ -14,7 +14,14 @@ import { describe, expect, it } from "vitest";
 /**
  *  Internal imports
  */
-import { describeChanges, describeDirs, describeSpace, dirActionLabel, hasChanges } from "@/lib/format";
+import {
+    averageRate,
+    describeChanges,
+    describeDirs,
+    describeSpace,
+    dirActionLabel,
+    hasChanges,
+} from "@/lib/format";
 import { emptyCounts, type itfDirCounts } from "@/shared/types";
 
 const f_Dirs = (patch: Partial<itfDirCounts>): itfDirCounts => ({
@@ -60,5 +67,26 @@ describe("describeSpace (F20)", () => {
         expect(describeSpace({ total: null, used: null, free: 1024 })).toBe("여유 1.0 KB");
         expect(describeSpace(null)).toBe("용량 확인 불가");
         expect(describeSpace({ total: null, used: 5, free: null })).toBe("용량 확인 불가");
+    });
+});
+
+describe("averageRate (평균 속도 · 남은 시간)", () => {
+    it("보낸 양 ÷ 지난 시간으로 속도를, 그 속도로 남은 시간을 낸다", () => {
+        expect(averageRate({ bytes: 1000, totalBytes: 3000, elapsed: 10 })).toEqual({ speed: 100, eta: 20 });
+    });
+
+    it("1초가 안 지났거나 보낸 양이 0이면 모른다", () => {
+        expect(averageRate({ bytes: 1000, totalBytes: 3000, elapsed: 0.5 })).toEqual({
+            speed: null,
+            eta: null,
+        });
+        expect(averageRate({ bytes: 0, totalBytes: 3000, elapsed: 30 })).toEqual({ speed: null, eta: null });
+    });
+
+    it("다 보냈으면 남은 시간은 쓰지 않는다", () => {
+        expect(averageRate({ bytes: 3000, totalBytes: 3000, elapsed: 30 })).toEqual({
+            speed: 100,
+            eta: null,
+        });
     });
 });

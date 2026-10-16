@@ -12,6 +12,7 @@
 import {
     plannedDeletes,
     type itfFileItem,
+    type itfProgress,
     type itfRunMeta,
     type itfSpace,
     type typCounts,
@@ -39,6 +40,21 @@ export function formatSeconds(seconds: number): string {
     if (s < 60) return `${s}초`;
     if (s < 3600) return `${Math.floor(s / 60)}분 ${s % 60}초`;
     return `${Math.floor(s / 3600)}시간 ${Math.floor((s % 3600) / 60)}분`;
+}
+
+/**
+ * 진행 줄의 평균 속도와 남은 시간. 평균 = 보낸 양 ÷ 지난 시간.
+ * rclone의 speed · eta는 최근 몇 초 기준이라 리모트가 큰 파일을 마무리하는 동안 0에 가깝게 떨어진다(spec 2026-10-17).
+ * 지난 시간이 1초 미만이거나 보낸 양이 0이면 둘 다 null, 다 보냈으면 남은 시간은 null
+ */
+export function averageRate(progress: Pick<itfProgress, "bytes" | "totalBytes" | "elapsed">): {
+    speed: number | null;
+    eta: number | null;
+} {
+    if (progress.elapsed < 1 || progress.bytes <= 0) return { speed: null, eta: null };
+    const speed = progress.bytes / progress.elapsed;
+    const left = progress.totalBytes - progress.bytes;
+    return { speed, eta: left > 0 ? left / speed : null };
 }
 
 export function formatDateTime(iso: string): string {

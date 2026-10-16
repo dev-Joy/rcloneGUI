@@ -10,7 +10,14 @@
 /**
  *  Internal imports
  */
-import { countsLine, describeDirs, formatBytes, formatSeconds, RUN_STATUS_NAMES } from "@/lib/format";
+import {
+    averageRate,
+    countsLine,
+    describeDirs,
+    formatBytes,
+    formatSeconds,
+    RUN_STATUS_NAMES,
+} from "@/lib/format";
 import { DETAILS_READING_MESSAGE, plannedDeletes, type itfProgress, type itfRunMeta } from "@/shared/types";
 import styles from "./JobRunBanner.module.css";
 
@@ -41,14 +48,16 @@ function f_ActiveTitle(run: itfRunMeta) {
     return run.kind === "preview" ? "비교하는 중" : "동기화하는 중";
 }
 
-/** 진행률 한 줄 */
+/** 진행률 한 줄. 속도와 남은 시간은 평균으로 쓴다 */
 function f_ProgressText(progress: itfProgress) {
+    const rate = averageRate(progress);
     return [
         `확인 ${progress.checks}/${progress.totalChecks}`,
         `전송 ${progress.transfers}/${progress.totalTransfers}`,
         `${formatBytes(progress.bytes)} / ${formatBytes(progress.totalBytes)}`,
-        progress.speed > 0 ? `${formatBytes(progress.speed)}/s` : "",
-        progress.eta !== null ? `남은 시간 ${formatSeconds(progress.eta)}` : "",
+        rate.speed !== null ? `평균 ${formatBytes(rate.speed)}/s` : "",
+        rate.eta !== null ? `남은 시간 약 ${formatSeconds(rate.eta)}` : "",
+        progress.finishing > 0 ? `리모트가 파일 ${progress.finishing}개를 마무리하는 중` : "",
         progress.deletes > 0 ? `삭제 ${progress.deletes}` : "",
         progress.errors > 0 ? `오류 ${progress.errors}` : "",
     ]
