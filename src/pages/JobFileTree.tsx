@@ -27,7 +27,14 @@ import {
     type itfTreeFolder,
     type itfTreeRow,
 } from "@/lib/file-tree";
-import { countsLine, dirActionLabel, formatBytes, formatDateTime, itemActionLabel } from "@/lib/format";
+import {
+    actionArrow,
+    countsLine,
+    dirActionLabel,
+    formatBytes,
+    formatDateTime,
+    itemActionLabel,
+} from "@/lib/format";
 import { isDestNewer, type itfFileItem, type itfFileSide, type itfRunMeta } from "@/shared/types";
 import styles from "./JobFileTree.module.css";
 
@@ -41,6 +48,8 @@ export interface itfJobFileTreeProps {
     /** 작업의 백업 설정 (미리보기 문구용) */
     backup: boolean;
     emptyText: string;
+    /** 줄 메뉴 (F23). 파일 줄은 그 항목, 폴더 줄은 경로(끝에 /). 화면 좌표 */
+    onItemMenu?: (target: { path: string; item: itfFileItem | null }, x: number, y: number) => void;
 }
 
 const propsDefault = {} satisfies Partial<itfJobFileTreeProps>;
@@ -62,7 +71,7 @@ function f_Time(side: itfFileSide | null | undefined) {
  *  메인 컴포넌트
  */
 export default function JobFileTree(iProps: itfJobFileTreeProps) {
-    const { items, run, backup, emptyText } = { ...propsDefault, ...iProps };
+    const { items, run, backup, emptyText, onItemMenu } = { ...propsDefault, ...iProps };
 
     //
     // hook & state 변수 선언
@@ -124,6 +133,9 @@ export default function JobFileTree(iProps: itfJobFileTreeProps) {
         const newer = isDestNewer(file.item);
         return (
             <span className={styles.action} title={newer ? `${label} · 대상이 더 최신` : label}>
+                <span className={styles.arrow} aria-hidden="true">
+                    {actionArrow(file.item, run.mode)}
+                </span>
                 <ZBCBadge tone={file.item.status}>{label}</ZBCBadge>
                 {newer && (
                     <span
@@ -237,6 +249,18 @@ export default function JobFileTree(iProps: itfJobFileTreeProps) {
                 onToggle={h_Toggle}
                 emptyText={emptyText}
                 rowClassName={(row) => (row.node.kind === "file" ? (styles[row.node.item.status] ?? "") : "")}
+                onRowMenu={
+                    onItemMenu
+                        ? (row, x, y) =>
+                              onItemMenu(
+                                  row.node.kind === "file"
+                                      ? { path: row.node.item.path, item: row.node.item }
+                                      : { path: `${row.node.id}/`, item: null },
+                                  x,
+                                  y,
+                              )
+                        : undefined
+                }
             />
         </div>
     );

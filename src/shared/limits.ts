@@ -20,6 +20,8 @@ export const INPUT_LIMITS = {
     excludeCount: 200,
     /** 그룹 이름 (F21) */
     groupName: 50,
+    /** 이번 실행에서 뺀 항목 수 (F23) */
+    skipCount: 200,
 } as const;
 
 /** 제외 패턴 줄들에서 첫 번째 문제를 안내 문구로 돌려준다. 문제가 없으면 null. */

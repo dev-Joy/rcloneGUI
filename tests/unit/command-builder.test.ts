@@ -20,6 +20,7 @@ import {
     buildArgs,
     buildFilterText,
     buildListArgs,
+    escapeGlob,
     clsCommandError,
     formatCommand,
     jobHash,
@@ -231,6 +232,27 @@ describe("buildFilterText", () => {
 
     it("제외가 없으면 빈 파일이다", () => {
         expect(buildFilterText([])).toBe("");
+    });
+
+    it("이번 실행에서 뺀 항목(F23)은 맨 앞에 뿌리 고정으로, 폴더는 폴더와 그 아래를 함께 뺀다", () => {
+        expect(buildFilterText(["*.log"], "folders", ["sub/a.txt", "build/"])).toBe(
+            "- /sub/a.txt\n- /build/\n- /build/**\n- *.log\n+ */\n- *\n",
+        );
+    });
+
+    it("글롭 특수 문자는 글자 그대로 읽게 막는다 (rclone-notes 2026-10-16)", () => {
+        expect(escapeGlob("a [1]/b{x}*?.txt")).toBe("a \\[1\\]/b\\{x\\}\\*\\?.txt");
+        expect(escapeGlob("back\\slash")).toBe("back\\\\slash");
+        expect(buildFilterText([], "files", ["a [1]/f.txt"])).toBe("- /a \\[1\\]/f.txt\n");
+    });
+
+    it("뺀 항목이 있으면 지문이 바뀌고, 없으면 예전 지문 그대로다 (SR-13)", () => {
+        const job = makeJob();
+        expect(jobHash({ ...job, skip: [] }, null)).toBe(jobHash(job, null));
+        expect(jobHash({ ...job, skip: ["a.txt"] }, null)).not.toBe(jobHash(job, null));
+        expect(jobHash({ ...job, skip: ["a.txt"] }, null)).not.toBe(
+            jobHash({ ...job, skip: ["b.txt"] }, null),
+        );
     });
 });
 

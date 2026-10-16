@@ -27,6 +27,7 @@ const api: itfRcloneGuiApi = {
         save: (job) => ipcRenderer.invoke(CHANNELS.jobsSave, job),
         delete: (jobId) => ipcRenderer.invoke(CHANNELS.jobsDelete, jobId),
         resumeSchedule: (jobId) => ipcRenderer.invoke(CHANNELS.jobsResumeSchedule, jobId),
+        setSkip: (input) => ipcRenderer.invoke(CHANNELS.jobsSetSkip, input),
         onChanged: (listener) => {
             const h_Changed = (): void => listener();
             ipcRenderer.on(CHANNELS.jobsChanged, h_Changed);

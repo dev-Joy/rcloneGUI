@@ -172,6 +172,7 @@ if (!app.requestSingleInstanceLock()) {
             resolveRclone: f_ResolveRclone,
             defaultConfig: async () => (await settings.get()).rcloneConfig,
             emit: (event) => mainWindow?.webContents.send(CHANNELS.runEvent, event),
+            onJobChanged: () => mainWindow?.webContents.send(CHANNELS.jobsChanged),
         });
 
         const scheduler = new clsScheduler({

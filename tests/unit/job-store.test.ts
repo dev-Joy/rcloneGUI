@@ -22,7 +22,7 @@ import { newJob } from "@/lib/job-defaults";
 import { clsJobError, clsJobStore, makeJobId, validateJobPaths } from "@/main/store/job-store";
 import { formatRunId, clsRunStore } from "@/main/store/run-store";
 import { findExcludeProblem, INPUT_LIMITS } from "@/shared/limits";
-import { jobInputSchema, jobSchema } from "@/shared/schemas";
+import { jobInputSchema, jobSchema, skipSaveSchema } from "@/shared/schemas";
 import type { typJobInput } from "@/shared/types";
 import { makeJob } from "./helpers";
 
@@ -58,6 +58,20 @@ describe("jobSchema", () => {
     it("새 작업 입력은 빈 ID를 허용한다", () => {
         expect(jobInputSchema.safeParse({ ...makeJob(), id: "" }).success).toBe(true);
         expect(jobSchema.safeParse({ ...makeJob(), id: "" }).success).toBe(false);
+    });
+});
+
+describe("이번 실행에서 뺀 항목 스키마 (F23)", () => {
+    it("예전 작업은 빈 목록으로 읽고, 앞 / · 줄바꿈 · 201개는 거부한다", () => {
+        const legacy = { ...makeJob() } as Record<string, unknown>;
+        delete legacy["skip"];
+        expect(jobSchema.parse(legacy).skip).toEqual([]);
+        expect(skipSaveSchema.safeParse({ jobId: "job-a", skip: ["a.txt", "dir/"] }).success).toBe(true);
+        expect(skipSaveSchema.safeParse({ jobId: "job-a", skip: ["/a.txt"] }).success).toBe(false);
+        expect(skipSaveSchema.safeParse({ jobId: "job-a", skip: ["a\nb"] }).success).toBe(false);
+        expect(skipSaveSchema.safeParse({ jobId: "job-a", skip: [""] }).success).toBe(false);
+        const many = Array.from({ length: 201 }, (_, i) => `f${i}.txt`);
+        expect(skipSaveSchema.safeParse({ jobId: "job-a", skip: many }).success).toBe(false);
     });
 });
 
@@ -254,6 +268,29 @@ describe("작업·실행 저장소 (임시 폴더)", () => {
         expect(fresh.schedule.paused).toBeNull();
         await store.setPaused(saved.id, null);
         expect((await store.get(saved.id)).schedule.paused).toBeNull();
+    });
+
+    it("뺀 항목(F23)은 setSkip으로만 바뀌고, 비우기는 예상한 목록 그대로일 때만 한다", async () => {
+        const store = new clsJobStore(db);
+        const saved = await store.save(f_Input());
+        expect(saved.skip).toEqual([]);
+        await store.setSkip(saved.id, ["a.txt", "dir/", "a.txt"]);
+        expect((await store.get(saved.id)).skip).toEqual(["a.txt", "dir/"]);
+        // 편집 창은 열 때 받은 skip을 보내지만 저장은 저장된 값을 지킨다
+        const resaved = await store.save({ ...saved, name: "이름만 바꿈", skip: [] });
+        expect(resaved.skip).toEqual(["a.txt", "dir/"]);
+        // 새 작업(복제 등)은 빈 목록으로 시작한다
+        const fresh = await store.save({
+            ...f_Input({ name: "복제", dest: join(dir, "dst-copy") }),
+            skip: ["x"],
+        });
+        expect(fresh.skip).toEqual([]);
+
+        expect(await store.clearSkipIf(saved.id, ["a.txt"])).toBe(false);
+        expect((await store.get(saved.id)).skip).toEqual(["a.txt", "dir/"]);
+        expect(await store.clearSkipIf(saved.id, ["a.txt", "dir/"])).toBe(true);
+        expect((await new clsJobStore(db).get(saved.id)).skip).toEqual([]);
+        expect(await store.clearSkipIf(saved.id, [])).toBe(false);
     });
 
     it("실행 ID는 시각 형식이고, 같은 초에는 번호를 붙인다", async () => {

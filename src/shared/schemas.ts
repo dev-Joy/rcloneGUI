@@ -36,6 +36,18 @@ const excludeSchema = z
     .max(INPUT_LIMITS.excludePattern, `제외 패턴 한 줄은 ${INPUT_LIMITS.excludePattern}자까지 쓸 수 있습니다`)
     .refine((v) => !/[\r\n\0]/.test(v), "제외 패턴에 줄바꿈을 넣을 수 없습니다");
 
+/** 이번 실행에서 뺀 항목 하나 (F23). 비교 목록의 상대 경로, 폴더는 끝에 / */
+const skipPathSchema = z
+    .string()
+    .min(1)
+    .max(INPUT_LIMITS.path, `경로는 ${INPUT_LIMITS.path}자까지 쓸 수 있습니다`)
+    .refine((v) => !/[\r\n\0]/.test(v), "경로에 줄바꿈을 넣을 수 없습니다")
+    .refine((v) => !v.startsWith("/") && v !== "/", "상대 경로여야 합니다");
+
+const skipListSchema = z
+    .array(skipPathSchema)
+    .max(INPUT_LIMITS.skipCount, `이번 실행에서 뺄 항목은 ${INPUT_LIMITS.skipCount}개까지입니다`);
+
 /**
  *  메인 클래스 / export 함수
  */
@@ -111,7 +123,12 @@ export const jobSchema = z.object({
     rcloneConfig: pathSchema.nullable(),
     // F21. 목록을 묶어 보는 그룹. 예전 작업은 그룹 없음.
     groupId: groupIdSchema.nullable().default(null),
+    // F23. 이번 실행에서 뺀 항목. 성공한 실제 동기화 뒤 main이 비운다. 예전 작업은 없음.
+    skip: skipListSchema.default([]),
 });
+
+/** jobs:set-skip 입력 (F23) */
+export const skipSaveSchema = z.object({ jobId: jobIdSchema, skip: skipListSchema });
 
 // 새 작업은 ID 없이 저장을 요청하고, main이 이름에서 ID를 만든다.
 export const jobInputSchema = jobSchema.extend({ id: jobIdSchema.or(z.literal("")) });

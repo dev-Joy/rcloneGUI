@@ -246,6 +246,8 @@ export function runSettingsOf(job: typJobInput, defaultConfig: string | null): R
         backup: job.safety.backup,
         allowIgnoreErrors: job.safety.allowIgnoreErrors,
         config: job.rcloneConfig ?? defaultConfig,
+        // F23. 비어 있으면 넣지 않아 예전 지문과 같다
+        ...(job.skip.length > 0 ? { skip: job.skip } : {}),
     };
 }
 

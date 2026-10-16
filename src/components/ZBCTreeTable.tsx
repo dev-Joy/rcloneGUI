@@ -11,7 +11,7 @@
  *  External imports
  */
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useRef, type CSSProperties, type ReactNode } from "react";
+import { useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 
 /**
  *  Props & Types 정의
@@ -44,6 +44,8 @@ export interface itfZBCTreeTableProps<R extends itfZBCTreeTableRow> {
     emptyText?: ReactNode;
     /** 줄마다 더할 className */
     rowClassName?: (row: R) => string;
+    /** 줄 오른쪽 클릭 · 메뉴 키(Shift+F10). 있으면 줄에 키보드 초점이 간다. 좌표는 화면 기준 */
+    onRowMenu?: (row: R, x: number, y: number) => void;
     className?: string;
 }
 
@@ -66,7 +68,7 @@ const ALIGN_CLASS = {
  *  메인 컴포넌트
  */
 export default function ZBCTreeTable<R extends itfZBCTreeTableRow>(iProps: itfZBCTreeTableProps<R>) {
-    const { rows, columns, onToggle, rowHeight, indent, emptyText, rowClassName, className } = {
+    const { rows, columns, onToggle, rowHeight, indent, emptyText, rowClassName, onRowMenu, className } = {
         ...propsDefault,
         ...iProps,
     };
@@ -137,6 +139,15 @@ export default function ZBCTreeTable<R extends itfZBCTreeTableRow>(iProps: itfZB
         );
     }
 
+    /** 메뉴 키 · Shift+F10이면 줄 왼쪽 아래에 메뉴를 연다 */
+    function h_RowKeyDown(row: R, event: KeyboardEvent<HTMLDivElement>) {
+        if (!onRowMenu) return;
+        if (event.key !== "ContextMenu" && !(event.key === "F10" && event.shiftKey)) return;
+        event.preventDefault();
+        const rect = event.currentTarget.getBoundingClientRect();
+        onRowMenu(row, rect.left + 24, rect.bottom);
+    }
+
     /** 폴더 줄을 더블클릭하면 접고 편다 */
     function h_DoubleClick(row: R) {
         if (row.hasChildren) onToggle(row.id);
@@ -173,6 +184,16 @@ export default function ZBCTreeTable<R extends itfZBCTreeTableRow>(iProps: itfZB
                                         transform: `translateY(${virtual.start}px)`,
                                     }}
                                     onDoubleClick={() => h_DoubleClick(row)}
+                                    tabIndex={onRowMenu ? 0 : undefined}
+                                    onContextMenu={
+                                        onRowMenu
+                                            ? (event) => {
+                                                  event.preventDefault();
+                                                  onRowMenu(row, event.clientX, event.clientY);
+                                              }
+                                            : undefined
+                                    }
+                                    onKeyDown={(event) => h_RowKeyDown(row, event)}
                                 >
                                     {columns.map((column, index) =>
                                         index === 0 ? (

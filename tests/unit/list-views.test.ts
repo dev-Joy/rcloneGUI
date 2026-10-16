@@ -15,7 +15,7 @@ import { describe, expect, it } from "vitest";
  *  Internal imports
  */
 import { buildFileTree } from "@/lib/file-tree";
-import { itemActionLabel } from "@/lib/format";
+import { actionArrow, itemActionLabel } from "@/lib/format";
 import { baselineExecute, excludedItems, newSince, pendingAfter, viewProblem } from "@/lib/list-views";
 import { diffExcluded } from "@/main/rclone/excluded";
 import { emptyCounts, type itfFileItem, type itfRunMeta } from "@/shared/types";
@@ -187,5 +187,18 @@ describe("보기 문구와 쓸 수 있는 실행 (F22)", () => {
         expect(viewProblem("pending", execute, [])).toBeNull();
         expect(viewProblem("pending", preview, [])).not.toBeNull();
         expect(viewProblem("pending", { ...execute, status: "running" }, [])).not.toBeNull();
+    });
+});
+
+describe("방향 기호 (F23)", () => {
+    it("추가 · 변경 →, sync 삭제 ✕, copy 대상에만 · 폴더 · 제외됨은 없음", () => {
+        expect(actionArrow({ status: "add" }, "sync")).toBe("→");
+        expect(actionArrow({ status: "change" }, "copy")).toBe("→");
+        expect(actionArrow({ status: "delete" }, "sync")).toBe("✕");
+        expect(actionArrow({ status: "delete" }, "copy")).toBe("");
+        expect(actionArrow({ status: "same" }, "sync")).toBe("=");
+        expect(actionArrow({ status: "error" }, "sync")).toBe("!");
+        expect(actionArrow({ status: "add", isDir: true }, "sync")).toBe("");
+        expect(actionArrow({ status: "same", note: "excluded" }, "sync")).toBe("");
     });
 });

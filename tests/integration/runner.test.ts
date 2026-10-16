@@ -36,6 +36,8 @@ if (rclone === null) {
 }
 
 let work: string;
+/** main이 작업을 바꿨다고 알린 작업 ID (F23) */
+let jobChanges: string[];
 
 let src: string;
 
@@ -100,6 +102,7 @@ async function f_SaveJob(patch: Partial<typJobInput> = {}): Promise<typJob> {
         schedule: { enabled: false, everyMinutes: 30, chainNext: null, cron: null, paused: null },
         rcloneConfig: null,
         groupId: null,
+        skip: [],
         ...patch,
     });
 }
@@ -138,6 +141,7 @@ describe.skipIf(rclone === null)("RcloneRunner + 실제 rclone", () => {
         jobs = new clsJobStore(database);
         runs = new clsRunStore(database, appDir);
         events = [];
+        jobChanges = [];
         clock = () => new Date();
         runner = new clsRcloneRunner({
             jobs,
@@ -149,6 +153,7 @@ describe.skipIf(rclone === null)("RcloneRunner + 실제 rclone", () => {
             now: () => clock(),
             // 실제 규칙은 드라이브 최상위에 쓰므로, 테스트는 임시 폴더 안으로 돌린다.
             backupDirFor: (_dest, jobId, runId) => join(work, "backup", jobId, runId),
+            onJobChanged: (jobId) => jobChanges.push(jobId),
         });
     });
 
@@ -544,6 +549,53 @@ describe.skipIf(rclone === null)("RcloneRunner + 실제 rclone", () => {
         await expect(
             runner.execute({ jobId: job.id, previewRunId: first.runId, confirmedDeletes: 1 }),
         ).rejects.toMatchObject({ code: "PREVIEW_STALE" });
+    });
+
+    it("이번 실행에서 빼면 그 전 미리보기로는 실행할 수 없고, 다시 비교한 뒤 그 항목만 두고 동기화한다 (F23 · SR-13)", async () => {
+        await f_Put(join(src, "sub", "b [1].txt"), "bracket");
+        const job = await f_SaveJob();
+        const first = await f_Preview(job.id);
+        expect(first.counts).toMatchObject({ add: 2, change: 1, delete: 1 });
+
+        await jobs.setSkip(job.id, ["changed.txt", "only-dst.txt", "sub/b [1].txt"]);
+        await expect(
+            runner.execute({ jobId: job.id, previewRunId: first.runId, confirmedDeletes: 1 }),
+        ).rejects.toMatchObject({ code: "PREVIEW_STALE" });
+
+        const again = await f_Preview(job.id);
+        expect(again.counts).toMatchObject({ add: 1, change: 0, delete: 0 });
+        const paths = (await runs.readItems(job.id, again.runId)).map((i) => i.path);
+        expect(paths).not.toContain("changed.txt");
+        expect(paths).not.toContain("sub/b [1].txt");
+        expect(paths).toContain("only-src.txt");
+        // 뺀 항목은 제외됨에 나온다 (F22)
+        expect((await runner.readExcluded(job.id, again.runId)).map((i) => i.path)).toEqual(
+            expect.arrayContaining(["changed.txt", "only-dst.txt", "sub/b [1].txt"]),
+        );
+
+        const done = await f_Execute(job.id, again.runId, 0);
+        expect(done.status).toBe("success");
+        const after = await f_Snapshot(dst);
+        expect(after["only-src.txt"]).toBe("new file");
+        expect(after["changed.txt"]).toBe("version 1");
+        expect(after["only-dst.txt"]).toBe("old file");
+        expect(after["sub/b [1].txt"]).toBeUndefined();
+        // 성공했으니 비우고 화면에 알린다
+        expect((await jobs.get(job.id)).skip).toEqual([]);
+        expect(jobChanges).toEqual([job.id]);
+    });
+
+    it("실행이 성공하지 않으면 뺀 항목을 그대로 둔다 (F23)", async () => {
+        const job = await f_SaveJob();
+        await jobs.setSkip(job.id, ["changed.txt"]);
+        const preview = await f_Preview(job.id);
+        // 미리보기 뒤 대상에만 있는 파일을 더 두면 삭제 한도(확인한 1개)에 걸려 실패한다
+        await f_Put(join(dst, "extra-1.txt"), "x");
+        await f_Put(join(dst, "extra-2.txt"), "x");
+        const done = await f_Execute(job.id, preview.runId, 1);
+        expect(done.status).toBe("failed");
+        expect((await jobs.get(job.id)).skip).toEqual(["changed.txt"]);
+        expect(jobChanges).toEqual([]);
     });
 
     it("같은 미리보기로 두 번 실행할 수 없다", async () => {

@@ -32,6 +32,7 @@ export function makeJob(overrides: Partial<typJob> = {}): typJob {
         schedule: { enabled: false, everyMinutes: 30, chainNext: null, cron: null, paused: null },
         rcloneConfig: null,
         groupId: null,
+        skip: [],
         ...overrides,
     };
 }

@@ -134,6 +134,8 @@ export class clsJobStore {
             ...input,
             id,
             schedule: { ...input.schedule, paused: stored?.schedule.paused ?? null },
+            // 이번 실행에서 뺀 항목(F23)은 setSkip으로만 바뀐다. 편집 창이 연 사이 실행 뒤 비워졌다면 되살리지 않는다.
+            skip: stored?.skip ?? [],
         };
 
         validateJobPaths(job);
@@ -176,6 +178,23 @@ export class clsJobStore {
         this.app.db.prepare("UPDATE jobs SET data = ? WHERE id = ?").run(JSON.stringify(next), jobId);
         this.jobs = (await this.list()).map((j) => (j.id === jobId ? next : j));
         return next;
+    }
+
+    /** 이번 실행에서 뺀 항목만 바꾼다 (F23). 지문이 바뀌어 그 전 미리보기는 실행에 쓸 수 없다 (SR-13) */
+    async setSkip(jobId: string, skip: readonly string[]): Promise<typJob> {
+        const job = await this.get(jobId);
+        const next: typJob = { ...job, skip: [...new Set(skip)] };
+        this.app.db.prepare("UPDATE jobs SET data = ? WHERE id = ?").run(JSON.stringify(next), jobId);
+        this.jobs = (await this.list()).map((j) => (j.id === jobId ? next : j));
+        return next;
+    }
+
+    /** 뺀 항목이 expected 그대로일 때만 비운다 (성공한 실제 동기화 뒤). 비웠으면 true */
+    async clearSkipIf(jobId: string, expected: readonly string[]): Promise<boolean> {
+        const job = await this.get(jobId);
+        if (job.skip.length === 0 || JSON.stringify(job.skip) !== JSON.stringify(expected)) return false;
+        await this.setSkip(jobId, []);
+        return true;
     }
 
     /**

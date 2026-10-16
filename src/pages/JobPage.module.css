@@ -213,6 +213,64 @@
             font-size: 12px;
         }
 
+        /* 이번 실행에서 뺀 항목 (F23) */
+        .skipped {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin: 0 16px 8px;
+            padding: 8px 12px;
+            border: 1px solid var(--zbc-change);
+            border-radius: 6px;
+            background: var(--zbc-change-bg);
+            font-size: 12px;
+        }
+
+        .skippedHead {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .skipList {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            max-height: 72px;
+            overflow: auto;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .skipItem {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            max-width: 100%;
+            padding: 1px 2px 1px 8px;
+            border: 1px solid var(--zbc-border);
+            border-radius: 999px;
+            background: var(--zbc-surface);
+        }
+
+        .skipPath {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .skipRemove {
+            flex: none;
+            border: 0;
+            border-radius: 999px;
+            padding: 0 6px;
+            background: none;
+            color: var(--zbc-muted);
+            cursor: pointer;
+        }
+
         .paused {
             display: flex;
             align-items: center;

@@ -80,6 +80,8 @@ export interface itfRunnerDeps {
     now?: () => Date;
     /** 백업 폴더 규칙. 기본은 대상 드라이브 최상위의 .rclonegui-backup (테스트에서 바꿔 끼운다). */
     backupDirFor?: (dest: string, jobId: string, runId: string) => string | null;
+    /** main이 작업을 바꿨을 때 (F23 성공한 실행 뒤 뺀 항목 비우기). 화면에 알린다 */
+    onJobChanged?: (jobId: string) => void;
 }
 
 interface itfActiveRun {
@@ -389,7 +391,7 @@ export class clsRcloneRunner {
         const dir = join(this.deps.manualDir, jobId);
         await mkdir(dir, { recursive: true });
         const filterPath = join(dir, "filter.txt");
-        await writeFile(filterPath, buildFilterText(job.excludes, job.options.scope), "utf8");
+        await writeFile(filterPath, buildFilterText(job.excludes, job.options.scope, job.skip), "utf8");
 
         const defaultConfig = await this.deps.defaultConfig();
         const base = { filterPath, combinedPath: join(dir, "combined.txt"), defaultConfig };
@@ -438,7 +440,7 @@ export class clsRcloneRunner {
             maxDelete,
             backupDir,
         });
-        await writeFile(filterPath, buildFilterText(job.excludes, job.options.scope), "utf8");
+        await writeFile(filterPath, buildFilterText(job.excludes, job.options.scope, job.skip), "utf8");
         const listArgs =
             kind === "preview" && job.options.readDetails
                 ? {
@@ -493,6 +495,7 @@ export class clsRcloneRunner {
         const previous = this.queues.get(key) ?? Promise.resolve();
         run.finished = previous
             .then(() => this.runProcess(run, exe, args, dir))
+            .then((done) => this.afterRun(job, done))
             .catch((error: unknown) => {
                 // 기록 저장 실패처럼 예상 밖의 오류도 화면에는 끝났다고 알려야 한다.
                 const failed: itfRunMeta = {
@@ -510,6 +513,20 @@ export class clsRcloneRunner {
 
         this.deps.emit({ runId, jobId: job.id, type: "started", payload: meta });
         return runId;
+    }
+
+    /**
+     * 성공한 실제 동기화 뒤 이번 실행에서 뺀 항목을 비운다 (F23). 실행을 시작할 때의 목록 그대로일 때만.
+     * 비우지 못해도 실행 결과는 그대로다.
+     */
+    private async afterRun(job: typJob, done: itfRunMeta): Promise<itfRunMeta> {
+        if (done.kind !== "execute" || done.status !== "success" || job.skip.length === 0) return done;
+        try {
+            if (await this.deps.jobs.clearSkipIf(job.id, job.skip)) this.deps.onJobChanged?.(job.id);
+        } catch {
+            // 작업이 지워졌거나 DB를 쓰지 못함. 다음 실행 전 사람이 되돌릴 수 있다.
+        }
+        return done;
     }
 
     private async runProcess(

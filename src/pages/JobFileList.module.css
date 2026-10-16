@@ -75,6 +75,15 @@
             color: var(--zbc-muted);
         }
 
+        /* 방향 기호 (F23). 글자 폭을 고정해 배지가 줄마다 같은 자리에 온다 */
+        .arrow {
+            flex: none;
+            width: 1em;
+            text-align: center;
+            color: var(--zbc-muted);
+            font-weight: 600;
+        }
+
         .action {
             display: flex;
             align-items: center;

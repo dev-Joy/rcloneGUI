@@ -28,6 +28,7 @@ import {
     runIdSchema,
     runRefSchema,
     settingsSchema,
+    skipSaveSchema,
 } from "@/shared/schemas";
 import type { typResult } from "@/shared/types";
 import { getRcloneStatus, listRemotes } from "@/main/rclone/locate";
@@ -127,6 +128,12 @@ export function registerIpc(deps: itfIpcDeps): void {
         const job = await jobs.setPaused(jobId, null);
         deps.scheduler.refresh(jobId);
         deps.onJobsSaved?.();
+        return job;
+    });
+    f_Handle(CHANNELS.jobsSetSkip, skipSaveSchema, async ({ jobId, skip }) => {
+        const job = await jobs.setSkip(jobId, skip);
+        deps.onJobsSaved?.();
+        deps.getWindow()?.webContents.send(CHANNELS.jobsChanged);
         return job;
     });
     f_Handle(CHANNELS.jobsDelete, jobIdSchema, async (jobId) => {

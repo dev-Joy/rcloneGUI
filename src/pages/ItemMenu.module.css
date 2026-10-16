@@ -1,0 +1,47 @@
+/*
+ *  @author dev-Joy 2026-10-16
+ *  @description
+ *      - ItemMenu(비교 목록 줄 메뉴) 스타일
+ *      - pages 레이어에 배정되어 components 레이어의 공용 스타일을 특이도 무관하게 오버라이드
+ */
+@layer pages {
+    /* 최상단 클래스 - 컴포넌트명과 동일 */
+    .ItemMenu {
+        position: fixed;
+        z-index: 50;
+        display: flex;
+        flex-direction: column;
+        padding: 4px;
+        border: 1px solid var(--zbc-border);
+        border-radius: 8px;
+        background: var(--zbc-surface);
+        box-shadow: var(--zbc-shadow);
+
+        .title {
+            padding: 4px 8px 6px;
+            font-size: 11px;
+            color: var(--zbc-muted);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .entry {
+            border: 0;
+            border-radius: 4px;
+            padding: 6px 8px;
+            background: none;
+            color: var(--zbc-text);
+            font: inherit;
+            font-size: 13px;
+            text-align: left;
+            cursor: pointer;
+
+            &:hover,
+            &:focus-visible {
+                background: var(--zbc-surface-2);
+                outline: none;
+            }
+        }
+    }
+}

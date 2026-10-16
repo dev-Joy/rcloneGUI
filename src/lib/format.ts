@@ -135,6 +135,28 @@ export function describeChanges(run: Pick<itfRunMeta, "mode" | "counts" | "dirs"
     return parts.length > 0 ? `대상에 ${parts.join(", ")}` : "바뀔 것 없음";
 }
 
+/**
+ * 일어날 일 칸 앞의 방향 기호 (F23). 추가 · 변경 →, sync 삭제 ✕, 같음 =, 오류 !.
+ * copy의 대상에만 · 폴더 작업 · 제외됨은 기호 없음("")
+ */
+export function actionArrow(
+    item: Pick<itfFileItem, "status" | "isDir" | "note">,
+    mode: typJob["mode"],
+): string {
+    if (item.isDir || item.note === "excluded") return "";
+    switch (item.status) {
+        case "add":
+        case "change":
+            return "→";
+        case "delete":
+            return mode === "sync" ? "✕" : "";
+        case "same":
+            return "=";
+        case "error":
+            return "!";
+    }
+}
+
 /** 목록 가운데 열 문구. 폴더 작업(F25)과 기타 보기의 표시(F22)까지 다룬다 */
 export function itemActionLabel(
     item: Pick<itfFileItem, "status" | "isDir" | "note">,

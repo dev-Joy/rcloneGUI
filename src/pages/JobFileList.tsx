@@ -11,13 +11,13 @@
  *  External imports
  */
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useRef } from "react";
+import { useRef, type KeyboardEvent } from "react";
 
 /**
  *  Internal imports
  */
 import ZBCBadge from "@/components/ZBCBadge";
-import { formatBytes, formatDateTime, itemActionLabel } from "@/lib/format";
+import { actionArrow, formatBytes, formatDateTime, itemActionLabel } from "@/lib/format";
 import { isDestNewer, type itfFileItem, type itfFileSide, type itfRunMeta } from "@/shared/types";
 import styles from "./JobFileList.module.css";
 
@@ -31,6 +31,8 @@ export interface itfJobFileListProps {
     backup: boolean;
     emptyText: string;
     rowHeight?: number;
+    /** 줄 메뉴 (F23). 화면 좌표 */
+    onItemMenu?: (item: itfFileItem, x: number, y: number) => void;
 }
 
 const propsDefault = {
@@ -50,7 +52,7 @@ function f_SideMeta(side: itfFileSide | null | undefined) {
  *  메인 컴포넌트
  */
 export default function JobFileList(iProps: itfJobFileListProps) {
-    const { items, run, backup, emptyText, rowHeight } = { ...propsDefault, ...iProps };
+    const { items, run, backup, emptyText, rowHeight, onItemMenu } = { ...propsDefault, ...iProps };
 
     //
     // hook & state 변수 선언
@@ -104,6 +106,15 @@ export default function JobFileList(iProps: itfJobFileListProps) {
         );
     }
 
+    /** 메뉴 키 · Shift+F10이면 줄 아래에 메뉴를 연다 (F23) */
+    function h_RowKeyDown(item: itfFileItem, event: KeyboardEvent<HTMLDivElement>) {
+        if (!onItemMenu) return;
+        if (event.key !== "ContextMenu" && !(event.key === "F10" && event.shiftKey)) return;
+        event.preventDefault();
+        const rect = event.currentTarget.getBoundingClientRect();
+        onItemMenu(item, rect.left + 24, rect.bottom);
+    }
+
     /** 경로 칸과 그 오른쪽의 크기 · 수정 시각 */
     function f_Side(
         item: itfFileItem,
@@ -141,9 +152,22 @@ export default function JobFileList(iProps: itfJobFileListProps) {
                                     key={`${item.isDir ? "d" : "f"}:${item.path}`}
                                     className={`${styles.row} ${styles[item.status] ?? ""}`}
                                     style={{ height: rowHeight, transform: `translateY(${row.start}px)` }}
+                                    tabIndex={onItemMenu ? 0 : undefined}
+                                    onContextMenu={
+                                        onItemMenu
+                                            ? (event) => {
+                                                  event.preventDefault();
+                                                  onItemMenu(item, event.clientX, event.clientY);
+                                              }
+                                            : undefined
+                                    }
+                                    onKeyDown={(event) => h_RowKeyDown(item, event)}
                                 >
                                     {f_Side(item, f_SourceCell(item), item.source)}
                                     <span className={styles.action}>
+                                        <span className={styles.arrow} aria-hidden="true">
+                                            {actionArrow(item, run.mode)}
+                                        </span>
                                         <ZBCBadge tone={item.status}>
                                             {itemActionLabel(item, run, backup)}
                                         </ZBCBadge>

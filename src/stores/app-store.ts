@@ -72,6 +72,8 @@ interface itfAppState {
     saveSettings(settings: typSettings): Promise<boolean>;
     /** main이 작업을 바꿨을 때 목록을 다시 읽는다 (F10 자동 실행 멈춤, F21 그룹) */
     reloadJobs(): Promise<void>;
+    /** 이번 실행에서 뺀 항목을 바꾼다 (F23). 그 전 미리보기로는 실행할 수 없게 된다 (SR-13) */
+    setSkip(jobId: string, skip: string[]): Promise<void>;
     /** 그룹을 만들거나 이름을 바꾼다 (F21). 성공하면 true */
     saveGroup(input: { id?: string; name: string }): Promise<boolean>;
     /** 그룹을 지운다. 그 그룹의 작업은 그룹 없음으로 옮겨진다 (F21) */
@@ -216,6 +218,15 @@ export const useApp = create<itfAppState>((set, get) => {
                 await unwrap(window.rclonegui.jobs.resumeSchedule(jobId));
                 set({ jobs: await unwrap(window.rclonegui.jobs.list()) });
                 get().notify("info", "자동 실행을 다시 켰습니다");
+            });
+        },
+
+        async setSkip(jobId, skip) {
+            await f_Guard(async () => {
+                await unwrap(window.rclonegui.jobs.setSkip({ jobId, skip }));
+                set({ jobs: await unwrap(window.rclonegui.jobs.list()) });
+                // 필터가 바뀌었으니 이전 미리보기로는 실행할 수 없다. main도 지문으로 거부한다.
+                f_PatchView(jobId, { invalidBefore: Date.now() });
             });
         },
 

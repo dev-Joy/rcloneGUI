@@ -56,10 +56,25 @@ export class clsCommandError extends Error {
  * "폴더 구조만"(F25)이면 끝에 폴더는 포함하고(슬래시로 끝나는 패턴) 파일은 모두 제외하는 두 줄을 붙인다.
  * 먼저 맞는 규칙이 이기므로 사용자의 제외 패턴이 우선한다.
  */
-export function buildFilterText(excludes: readonly string[], scope: typSyncScope = "files"): string {
-    const lines = excludes.map((pattern) => `- ${pattern}\n`);
+export function buildFilterText(
+    excludes: readonly string[],
+    scope: typSyncScope = "files",
+    skip: readonly string[] = [],
+): string {
+    // 이번 실행에서 뺀 항목(F23)이 먼저다. 뿌리에 고정(/)하고 글롭 특수 문자를 막는다.
+    const lines = skip.flatMap((path) => {
+        if (!path.endsWith("/")) return [`- /${escapeGlob(path)}\n`];
+        const dir = escapeGlob(path.slice(0, -1));
+        return [`- /${dir}/\n`, `- /${dir}/**\n`];
+    });
+    lines.push(...excludes.map((pattern) => `- ${pattern}\n`));
     if (scope === "folders") lines.push("+ */\n", "- *\n");
     return lines.join("");
+}
+
+/** rclone 필터 글롭의 특수 문자(\ * ? [ ] { })를 글자 그대로 읽게 한다 (F23, rclone-notes 2026-10-16) */
+export function escapeGlob(path: string): string {
+    return path.replace(/[\\*?[\]{}]/g, "\\$&");
 }
 
 /**

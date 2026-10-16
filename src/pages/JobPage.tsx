@@ -30,6 +30,7 @@ import {
 } from "@/lib/format";
 import { cloneJob } from "@/lib/job-defaults";
 import { baselineExecute, excludedItems, newSince, pendingAfter, viewProblem } from "@/lib/list-views";
+import { INPUT_LIMITS } from "@/shared/limits";
 import { unwrap, usablePreview, useApp } from "@/stores/app-store";
 import {
     isDestTooSmall,
@@ -40,6 +41,7 @@ import {
     type typJob,
     type typJobInput,
 } from "@/shared/types";
+import ItemMenu, { type itfItemMenuEntry } from "./ItemMenu";
 import JobFileList from "./JobFileList";
 import JobFileTree from "./JobFileTree";
 import JobHistoryTable from "./JobHistoryTable";
@@ -85,6 +87,14 @@ const LIST_VIEWS: { value: typListView; label: string }[] = [
     { value: "new", label: "새로 생김 (지난 동기화 뒤)" },
     { value: "pending", label: "아직 실행되지 않음" },
 ];
+
+/** 열린 줄 메뉴 (F23). path는 비교 목록의 상대 경로, 폴더는 끝에 / */
+interface itfMenuTarget {
+    path: string;
+    item: itfFileItem | null;
+    x: number;
+    y: number;
+}
 
 /** 따로 읽어야 하는 보기의 목록 */
 interface itfExtraItems {
@@ -162,6 +172,9 @@ export default function JobPage(iProps: itfJobPageProps) {
     const [picked, setPicked] = useState<{ view: typListView; runId: string } | null>(null);
     /** 따로 읽은 보기 목록 */
     const [extra, setExtra] = useState<itfExtraItems | null>(null);
+    /** 열린 줄 메뉴 (F23) */
+    const [menu, setMenu] = useState<itfMenuTarget | null>(null);
+    const setSkip = useApp((s) => s.setSkip);
     /** 트리 / 평면 보기 */
     const [layout, setLayout] = useState<typCompareLayout>("tree");
     /** 확인 창을 연 미리보기. 그 미리보기가 무효가 되면 창도 닫힌다 */
@@ -356,6 +369,66 @@ export default function JobPage(iProps: itfJobPageProps) {
         setFilter((current) => ({ ...current, [status]: !current[status] }));
     }
 
+    /** 이 줄을 이번 실행에서 뺄 수 있는지 (F23). 미리보기에서 할 일이 있는 파일과 폴더만 */
+    function f_CanSkip(target: itfMenuTarget) {
+        if (_V.shown?.kind !== "preview" || listView === "excluded" || listView === "pending") return false;
+        const { item } = target;
+        if (item === null || item.isDir) return true;
+        if (item.note) return false;
+        return (
+            item.status === "add" ||
+            item.status === "change" ||
+            (item.status === "delete" && job.mode === "sync")
+        );
+    }
+
+    /** 줄 메뉴의 항목 */
+    function f_MenuEntries(target: itfMenuTarget): itfItemMenuEntry[] {
+        const entries: itfItemMenuEntry[] = [];
+        if (f_CanSkip(target) || job.skip.includes(target.path)) {
+            const skipped = job.skip.includes(target.path);
+            entries.push({
+                label: skipped ? "다시 넣기 (빼기 취소)" : "이번 실행에서 빼기",
+                onSelect: () => void h_ToggleSkip(target.path, skipped),
+            });
+        }
+        entries.push({ label: "경로 복사", onSelect: () => void h_CopyPath(target.path) });
+        return entries;
+    }
+
+    /** 줄 메뉴를 닫는다 */
+    function h_CloseMenu() {
+        setMenu(null);
+    }
+
+    /** 줄 메뉴를 연다 */
+    function h_ItemMenu(path: string, item: itfFileItem | null, x: number, y: number) {
+        setMenu({ path, item, x, y });
+    }
+
+    /** 이번 실행에서 빼거나 다시 넣는다 (F23 · SR-13) */
+    async function h_ToggleSkip(path: string, skipped: boolean) {
+        if (!skipped && job.skip.length >= INPUT_LIMITS.skipCount) {
+            notify("error", `이번 실행에서 뺄 항목은 ${INPUT_LIMITS.skipCount}개까지입니다`);
+            return;
+        }
+        await setSkip(job.id, skipped ? job.skip.filter((p) => p !== path) : [...job.skip, path]);
+        notify(
+            "info",
+            skipped ? "다시 넣었습니다. 다시 비교하세요" : "이번 실행에서 뺐습니다. 다시 비교하세요",
+        );
+    }
+
+    /** 경로를 클립보드에 복사한다 */
+    async function h_CopyPath(path: string) {
+        try {
+            await unwrap(window.rclonegui.app.copyText(path));
+            notify("info", "경로를 복사했습니다");
+        } catch (error) {
+            notify("error", messageOf(error));
+        }
+    }
+
     /** "기타" 보기를 고른다 (F22) */
     function h_PickView(value: string) {
         const option = LIST_VIEWS.find((candidate) => candidate.value === value);
@@ -466,6 +539,37 @@ export default function JobPage(iProps: itfJobPageProps) {
                     </ZBCButton>
                 </div>
             )}
+            {job.skip.length > 0 && (
+                <div className={styles.skipped}>
+                    <div className={styles.skippedHead}>
+                        <span>
+                            <b>이번 실행에서 뺀 항목 {job.skip.length}개</b> — 다시 비교한 목록으로만
+                            동기화합니다. 실제 동기화가 성공하면 다시 넣습니다.
+                        </span>
+                        <ZBCButton small onClick={() => void setSkip(job.id, [])}>
+                            모두 되돌리기
+                        </ZBCButton>
+                    </div>
+                    <ul className={styles.skipList}>
+                        {job.skip.map((path) => (
+                            <li key={path} className={styles.skipItem}>
+                                <span className={styles.skipPath} title={path}>
+                                    {path}
+                                </span>
+                                <button
+                                    type="button"
+                                    className={styles.skipRemove}
+                                    aria-label={`${path} 다시 넣기`}
+                                    title="다시 넣기"
+                                    onClick={() => void h_ToggleSkip(path, true)}
+                                >
+                                    ✕
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
             <JobRunBanner active={_V.active} progress={view?.progress ?? null} shown={_V.shown} />
             {nextJob &&
                 _V.active === null &&
@@ -563,6 +667,7 @@ export default function JobPage(iProps: itfJobPageProps) {
                             run={_V.listRun}
                             backup={job.safety.backup}
                             emptyText={_V.emptyText}
+                            onItemMenu={(target, x, y) => h_ItemMenu(target.path, target.item, x, y)}
                         />
                     ) : _V.shown && _V.listRun ? (
                         <JobFileList
@@ -570,6 +675,9 @@ export default function JobPage(iProps: itfJobPageProps) {
                             run={_V.listRun}
                             backup={job.safety.backup}
                             emptyText={_V.emptyText}
+                            onItemMenu={(item, x, y) =>
+                                h_ItemMenu(item.isDir ? `${item.path}/` : item.path, item, x, y)
+                            }
                         />
                     ) : (
                         <div className={styles.placeholder}>
@@ -612,6 +720,15 @@ export default function JobPage(iProps: itfJobPageProps) {
                 )}
             </footer>
 
+            {menu && (
+                <ItemMenu
+                    x={menu.x}
+                    y={menu.y}
+                    title={menu.path}
+                    entries={f_MenuEntries(menu)}
+                    onClose={h_CloseMenu}
+                />
+            )}
             {_V.preview && confirmingRunId === _V.preview.runId && (
                 <RunConfirmDialog
                     job={job}
