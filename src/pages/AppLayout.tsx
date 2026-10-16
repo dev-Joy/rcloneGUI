@@ -31,10 +31,13 @@ import SettingsDialog from "./SettingsDialog";
 export interface itfAppLayoutProps {
     /** 정보 안내가 스스로 사라지기까지의 시간 (ms) */
     noticeMs?: number;
+    /** 오류 안내가 스스로 사라지기까지의 시간 (ms). 읽을 시간을 더 준다 */
+    errorNoticeMs?: number;
 }
 
 const propsDefault: itfAppLayoutProps = {
     noticeMs: 3000,
+    errorNoticeMs: 10000,
 };
 
 /**
@@ -45,7 +48,7 @@ const propsDefault: itfAppLayoutProps = {
  *  메인 컴포넌트
  */
 export default function AppLayout(iProps: itfAppLayoutProps = propsDefault) {
-    const { noticeMs } = { ...propsDefault, ...iProps };
+    const { noticeMs, errorNoticeMs } = { ...propsDefault, ...iProps };
 
     //
     // hook & state 변수 선언
@@ -84,12 +87,12 @@ export default function AppLayout(iProps: itfAppLayoutProps = propsDefault) {
         };
     }, [init, handleEvent, reloadJobs]);
 
-    // 정보 안내는 잠시 뒤 스스로 사라지고, 오류는 닫을 때까지 남긴다.
+    // 안내는 잠시 뒤 스스로 사라진다. 오류는 더 오래 남기고, [✕]로 먼저 닫을 수 있다.
     useEffect(() => {
-        if (!notice || notice.kind === "error") return;
-        const timer = window.setTimeout(clearNotice, noticeMs);
+        if (!notice) return;
+        const timer = window.setTimeout(clearNotice, notice.kind === "error" ? errorNoticeMs : noticeMs);
         return () => window.clearTimeout(timer);
-    }, [notice, clearNotice, noticeMs]);
+    }, [notice, clearNotice, noticeMs, errorNoticeMs]);
 
     //
     // 내부 변수

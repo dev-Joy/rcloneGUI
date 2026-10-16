@@ -148,6 +148,13 @@ export const useApp = create<itfAppState>((set, get) => {
                 ]);
                 set({ jobs, settings, rclone, ready: true });
                 if (jobs[0]) await get().select(jobs[0].id);
+                // 고르지 않은 작업도 목록에 마지막 실행 시각이 보이게 기록을 읽어 둔다.
+                await Promise.all(
+                    jobs.slice(1).map(async (job) => {
+                        const history = await unwrap(window.rclonegui.runs.list(job.id)).catch(() => null);
+                        if (history) f_PatchView(job.id, { history });
+                    }),
+                );
             });
             set({ ready: true });
         },

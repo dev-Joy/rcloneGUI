@@ -230,6 +230,13 @@
 - R1: reviewer REJECTED — 자동 실행이 꺼진 체인 대상이 멈추면 멈춤 배너 · [다시 켜기] · 목록 배지가 안 보임, 체인 대상의 자동 삭제 한도 칸이 안 보임, prd SR-11 미갱신. R2 수정: 멈춤 표시는 enabled와 무관하게, 자동 한도 칸은 자동 실행을 켰거나 다른 작업의 체인 대상이면 보이고 안내 한 줄, 고리 오류 문구, prd SR-11
 - R2: reviewer · app-verifier 모두 APPROVED. 후속 후보: 오류 알림이 저절로 닫히지 않고 편집 창 단추를 가림(기존), rclone을 못 쓸 때도 [이어서] 단추가 눌림
 
+### [TASK_023] : (2026-10-16) [커밋 정리와 화면 후속 정리]
+
+- 브랜치 `feat/v0.2`에 커밋 4개(build 설치본 · test rclone 실험 · feat v0.2 기능 · docs). 여러 기능이 같은 파일을 바꿔 코드는 한 커밋. `docs/DESIGN.md`(사용자 파일)는 커밋하지 않음. `pnpm-workspace.yaml`의 electron-winstaller 자리표시를 false로
+- 알림을 위쪽(top 12px, z-index 1000)으로 옮겨 대화상자 [저장] · [취소]를 가리지 않게, 오류 알림도 10초 뒤 자동으로 닫힘
+- 앱을 켤 때 고르지 않은 작업의 실행 기록도 읽어 목록에 마지막 실행 시각 표시
+- rclone을 쓸 수 없으면 [이어서: … 비교] 비활성
+
 ## Error
 
 ### [ERR_001] : (2026-10-11) oxlint `no-restricted-imports`의 `group: ["../*"]`가 `../lib/format`을 못 잡음 → TASK_003

@@ -59,7 +59,9 @@
         .notice {
             position: fixed;
             left: 50%;
-            bottom: 18px;
+            /* 대화상자 아래쪽 단추를 가리지 않게 위쪽에 띄운다 */
+            top: 12px;
+            z-index: 1000;
             transform: translateX(-50%);
             max-width: min(720px, calc(100vw - 40px));
             display: flex;

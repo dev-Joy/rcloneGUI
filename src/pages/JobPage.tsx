@@ -330,7 +330,12 @@ export default function JobPage(iProps: itfJobPageProps) {
                             이 작업에 이어서 <b>{nextJob.name}</b>을(를) 실행하도록 되어 있습니다. 비교 결과를
                             확인한 뒤 실행하세요.
                         </span>
-                        <ZBCButton small onClick={() => void h_ChainNext(nextJob.id)}>
+                        <ZBCButton
+                            small
+                            onClick={() => void h_ChainNext(nextJob.id)}
+                            disabled={!_V.canRun}
+                            title={_V.canRun ? undefined : "rclone을 쓸 수 있어야 비교할 수 있습니다"}
+                        >
                             이어서: {nextJob.name} 비교
                         </ZBCButton>
                     </div>
