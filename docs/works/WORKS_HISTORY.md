@@ -284,6 +284,7 @@
 - 사용자가 테스트 폴더로 리모트를 만듦(root_folder_id 지정). 읽기 확인(lsjson · about) → 앱에서 로컬 → Drive 비교 · 동기화 · 재비교(같음만)
 - 수정 1: 리모트 대상 폴더가 없을 때 lsjson exit 3을 빈 목록으로(readDetails · computeExcluded). 통합 테스트는 환경 변수 local 백엔드 리모트로 재현(고치기 전 실패 확인)
 - 수정 2: `clsRunStore.closeInterrupted` — 앱이 켜질 때 대기 · 실행 중 기록을 실패로 닫음(실제 동기화는 "일부 파일만 바뀌었을 수 있음"). 사용자가 누른 Drive 동기화 도중 빌드하려고 앱을 꺼서 드러남
+- 수정 3: 사용자가 대상 칸에 Drive 웹 주소를 넣어 rclone이 "https" 리모트를 찾지 못함 → pathSchema가 웹 주소를 거부, describeExit가 "설정에 없는 리모트"를 풀어 씀
 - 남은 것: 공용 client_id 종료 예고(자기 client_id로 리모트 재생성 필요), Drive 쪽 백업 폴더 · fast-list 미확인. 별도 reviewer · app-verifier 루프는 돌리지 않음(버그 수정 2건, 단위 · 통합 테스트와 실제 앱으로 확인)
 
 ## Error

@@ -37,6 +37,8 @@ describe("jobSchema", () => {
         ["옵션처럼 보이는 원본", { source: "--delete-excluded" }],
         ["줄바꿈이 든 대상", { dest: "D:\\a\nb" }],
         ["줄바꿈이 든 제외 패턴", { excludes: ["a\n+ **"] }],
+        ["웹 주소 대상", { dest: "https://drive.example.com/drive/folders/abc" }],
+        ["웹 주소 원본", { source: "HTTP://example.com/x" }],
         ["경로 탈출을 노린 ID", { id: "..\\..\\x" }],
         [
             "0 이하 checkers",

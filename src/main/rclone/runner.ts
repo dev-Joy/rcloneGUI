@@ -199,6 +199,13 @@ export class clsRunError extends Error {
 
 /** rclone 종료 코드를 사람이 읽는 말로 */
 export function describeExit(code: number | null, errors: readonly string[]): string {
+    // 설정에 없는 리모트 이름 (예: 경로 칸에 웹 주소를 넣으면 "https"를 리모트로 읽는다)
+    const unknownRemote = errors
+        .map((line) => /didn't find section in config file \("([^"]*)"\)/.exec(line))
+        .find((match) => match !== null);
+    if (unknownRemote) {
+        return `rclone 설정에 "${unknownRemote[1]}" 리모트가 없습니다. rclone config로 만든 리모트 이름을 쓰세요`;
+    }
     if (errors.some((line) => line.includes("max-delete threshold"))) {
         return "삭제 한도에 걸려 멈췄습니다. 미리보기 뒤에 원본이나 대상이 바뀌었습니다. 다시 비교하세요";
     }

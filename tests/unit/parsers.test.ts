@@ -26,6 +26,7 @@ import {
 import { createLineSplitter, dirOpOf, formatErrorLine, parseLogLine } from "@/main/parsers/json-log";
 import { parseAbout } from "@/main/parsers/about";
 import { parseLsjson } from "@/main/parsers/lsjson";
+import { describeExit } from "@/main/rclone/runner";
 import { isDestNewer, isDestTooSmall, type itfFileItem } from "@/shared/types";
 
 // fixtures는 rclone v1.75.1 (Windows)에서 scripts/probes/rclone-probes.ps1로 받은 실제 출력이다.
@@ -302,5 +303,16 @@ describe("isDestTooSmall (F20)", () => {
         expect(isDestTooSmall(null)).toBe(false);
         expect(isDestTooSmall(f_Space(null, 5))).toBe(false);
         expect(isDestTooSmall({ source: null, dest: null, transferBytes: 5 })).toBe(false);
+    });
+});
+
+describe("describeExit: 설정에 없는 리모트", () => {
+    it("경로 칸에 웹 주소를 넣어 https를 리모트로 읽은 경우 무엇이 틀렸는지 알려 준다", () => {
+        const line =
+            'Failed to create file system for "https://drive.example.com/drive/folders/abc": didn\'t find section in config file ("https")';
+        expect(describeExit(1, [line])).toBe(
+            'rclone 설정에 "https" 리모트가 없습니다. rclone config로 만든 리모트 이름을 쓰세요',
+        );
+        expect(describeExit(0, [])).toBe("성공");
     });
 });

@@ -27,7 +27,12 @@ const pathSchema = z
     .max(INPUT_LIMITS.path, `경로는 ${INPUT_LIMITS.path}자까지 쓸 수 있습니다`)
     .refine((v) => !/[\r\n\0]/.test(v), "경로에 줄바꿈을 넣을 수 없습니다")
     // rclone이 옵션으로 읽지 않도록 막는다.
-    .refine((v) => !v.startsWith("-"), "경로는 - 로 시작할 수 없습니다");
+    .refine((v) => !v.startsWith("-"), "경로는 - 로 시작할 수 없습니다")
+    // 웹 주소(https://drive.google.com/…)는 rclone이 "https"라는 리모트로 읽는다. 리모트 이름으로 쓰게 한다.
+    .refine(
+        (v) => !/^[a-z][a-z0-9+.-]*:\/\//i.test(v),
+        "웹 주소는 쓸 수 없습니다. rclone 리모트 이름으로 쓰세요 (예: 리모트이름:폴더)",
+    );
 
 const excludeSchema = z
     .string()
