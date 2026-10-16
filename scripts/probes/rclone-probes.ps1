@@ -101,10 +101,66 @@ Setup
 [IO.File]::WriteAllText((Join-Path $Work 'job.filter'), "- node_modules/**`n- *.sock`n")
 & $Rclone sync src dst --dry-run --filter-from job.filter --combined combined-l.txt --retries 1 2> $null
 "[exit $LASTEXITCODE]"; Show 'combined-l.txt'
-& $Rclone lsjson -R --files-only --filter-from job.filter src
-"[exit $LASTEXITCODE]"
+# F11: both sides with the same filter. Saved as tests/fixtures/lsjson-l-src.json and lsjson-l-dst.json.
+# "> file" in PowerShell 5.1 writes UTF-16, so stdout goes through Start-Process (raw bytes).
+foreach ($side in 'src', 'dst') {
+  $p = Start-Process -FilePath $Rclone -ArgumentList @('lsjson', '-R', '--files-only', '--filter-from', 'job.filter', $side) -NoNewWindow -Wait -PassThru -RedirectStandardOutput "lsjson-l-$side.json" -RedirectStandardError "lsjson-l-$side.err"
+  "[exit $($p.ExitCode)]"; Show "lsjson-l-$side.json"
+}
+$p = Start-Process -FilePath $Rclone -ArgumentList @('lsjson', '-R', '--files-only', 'missing-dir') -NoNewWindow -Wait -PassThru -RedirectStandardOutput 'lsjson-missing.json' -RedirectStandardError 'lsjson-missing.err'
+"[exit missing $($p.ExitCode)]"; Show 'lsjson-missing.err'
 & $Rclone listremotes
 "[exit $LASTEXITCODE]"
+
+# F25 scope: all / files only / folder structure only. Empty dirs: src\emptydir, dst\dst-emptydir.
+function SetupScope {
+  Setup
+  New-Item -ItemType Directory -Force -Path (Join-Path $Work 'src\emptydir\inner') | Out-Null
+  New-Item -ItemType Directory -Force -Path (Join-Path $Work 'dst\dst-emptydir') | Out-Null
+}
+function Tree([string]$root) {
+  Get-ChildItem -LiteralPath (Join-Path $Work $root) -Recurse | ForEach-Object {
+    $kind = if ($_.PSIsContainer) { 'D' } else { 'F' }
+    "$kind $($_.FullName.Substring($Work.Length + 1))"
+  }
+}
+
+Hdr 'P1. sync (default, files only?) real run'
+SetupScope
+RunLog 'log-p1.jsonl' @('sync', 'src', 'dst', '--combined', 'combined-p1.txt', '--exclude', 'node_modules/**', '--retries', '1')
+"[exit $LASTEXITCODE]"; '--- combined'; Show 'combined-p1.txt'; '--- dst'; Tree 'dst'
+
+Hdr 'P2. sync --create-empty-src-dirs real run'
+SetupScope
+RunLog 'log-p2.jsonl' @('sync', 'src', 'dst', '--create-empty-src-dirs', '--combined', 'combined-p2.txt', '--exclude', 'node_modules/**', '--retries', '1')
+"[exit $LASTEXITCODE]"; '--- combined'; Show 'combined-p2.txt'; '--- dst'; Tree 'dst'
+
+Hdr 'P3. sync --create-empty-src-dirs with filter "- *" (folders only?) dry-run then real'
+SetupScope
+[IO.File]::WriteAllText((Join-Path $Work 'dirs.filter'), "- node_modules/**`n+ */`n- *`n")
+RunLog 'log-p3d.jsonl' @('sync', 'src', 'dst', '--dry-run', '--create-empty-src-dirs', '--filter-from', 'dirs.filter', '--combined', 'combined-p3d.txt', '--use-json-log', '--retries', '1', '-v')
+"[exit dry $LASTEXITCODE]"; '--- combined'; Show 'combined-p3d.txt'; '--- dst after dry-run'; Tree 'dst'
+RunLog 'log-p3.jsonl' @('sync', 'src', 'dst', '--create-empty-src-dirs', '--filter-from', 'dirs.filter', '--combined', 'combined-p3.txt', '--retries', '1', '-v')
+"[exit $LASTEXITCODE]"; '--- combined'; Show 'combined-p3.txt'; '--- dst'; Tree 'dst'; '--- log'; Show 'log-p3.jsonl'
+
+Hdr 'P4. copy with filter "- *" and --create-empty-src-dirs (folders only, copy) real run'
+SetupScope
+RunLog 'log-p4.jsonl' @('copy', 'src', 'dst', '--create-empty-src-dirs', '--filter-from', 'dirs.filter', '--combined', 'combined-p4.txt', '--retries', '1')
+"[exit $LASTEXITCODE]"; '--- combined'; Show 'combined-p4.txt'; '--- dst'; Tree 'dst'
+
+Hdr 'P5. sync --create-empty-src-dirs real run with JSON log (directory messages)'
+SetupScope
+RunLog 'log-p5.jsonl' @('sync', 'src', 'dst', '--create-empty-src-dirs', '--combined', 'combined-p5.txt', '--exclude', 'node_modules/**', '--use-json-log', '-v', '--retries', '1')
+"[exit $LASTEXITCODE]"; '--- log (directory lines)'; Show 'log-p5.jsonl' | Select-String -Pattern 'irector'
+
+Hdr 'P6. dst-only folder that holds only filtered files (folders-only filter), dry-run then real --max-delete 0'
+SetupScope
+Mk 'dst\dstonly-withfile\x.txt' 'kept'
+RunLog 'log-p6d.jsonl' @('sync', 'src', 'dst', '--dry-run', '--create-empty-src-dirs', '--filter-from', 'dirs.filter', '--combined', 'combined-p6d.txt', '--use-json-log', '-v', '--retries', '1')
+"[exit dry $LASTEXITCODE]"; '--- dry-run directory lines'; Show 'log-p6d.jsonl' | Select-String -Pattern 'remove directory'
+RunLog 'log-p6.jsonl' @('sync', 'src', 'dst', '--create-empty-src-dirs', '--filter-from', 'dirs.filter', '--max-delete', '0', '--combined', 'combined-p6.txt', '--use-json-log', '-v', '--retries', '1')
+"[exit $LASTEXITCODE]"; '--- real run directory lines'; Show 'log-p6.jsonl' | Select-String -Pattern 'Removing directory'
+'--- dst after (dstonly-withfile must remain)'; Tree 'dst' | Select-String -Pattern 'dstonly|dst-emptydir'
 
 Hdr 'N. copy --dry-run --combined (are dst-only files reported as -?)'
 Setup

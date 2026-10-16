@@ -1,0 +1,7 @@
+[
+{"Path":"changed.txt","Name":"changed.txt","Size":16,"MimeType":"text/plain; charset=utf-8","ModTime":"2026-10-14T15:52:03.7604525+09:00","IsDir":false},
+{"Path":"only-src.txt","Name":"only-src.txt","Size":8,"MimeType":"text/plain; charset=utf-8","ModTime":"2026-10-14T15:52:03.7500800+09:00","IsDir":false},
+{"Path":"same.txt","Name":"same.txt","Size":5,"MimeType":"text/plain; charset=utf-8","ModTime":"2026-10-01T10:00:00.0000000+09:00","IsDir":false},
+{"Path":"한글 dir/file with space.txt","Name":"file with space.txt","Size":1,"MimeType":"text/plain; charset=utf-8","ModTime":"2026-10-14T15:52:03.7853268+09:00","IsDir":false},
+{"Path":"sub/deep.txt","Name":"deep.txt","Size":4,"MimeType":"text/plain; charset=utf-8","ModTime":"2026-10-01T10:00:00.0000000+09:00","IsDir":false}
+]
