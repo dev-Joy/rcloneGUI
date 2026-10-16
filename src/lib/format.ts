@@ -12,6 +12,7 @@
 import {
     plannedDeletes,
     type itfRunMeta,
+    type itfSpace,
     type typCounts,
     type typItemStatus,
     type typJob,
@@ -160,4 +161,13 @@ export const RUN_STATUS_NAMES: Record<itfRunMeta["status"], string> = {
 /** 예외를 화면에 보여줄 한 줄로 */
 export function messageOf(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
+}
+
+/** 한쪽 용량 한 줄 (F20). "여유 468 GB / 전체 512 GB". 모르면 "용량 확인 불가" */
+export function describeSpace(space: itfSpace | null): string {
+    if (!space || (space.free === null && space.total === null)) return "용량 확인 불가";
+    const parts: string[] = [];
+    if (space.free !== null) parts.push(`여유 ${formatBytes(space.free)}`);
+    if (space.total !== null) parts.push(`전체 ${formatBytes(space.total)}`);
+    return parts.join(" / ");
 }

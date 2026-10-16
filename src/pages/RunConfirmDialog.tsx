@@ -18,8 +18,15 @@ import { useState } from "react";
 import ZBCButton from "@/components/ZBCButton";
 import ZBCCheck from "@/components/ZBCCheck";
 import ZBCModal from "@/components/ZBCModal";
-import { changeTotal, describeDirs } from "@/lib/format";
-import { isDestNewer, plannedDeletes, type itfFileItem, type itfRunMeta, type typJob } from "@/shared/types";
+import { changeTotal, describeDirs, formatBytes } from "@/lib/format";
+import {
+    isDestNewer,
+    isDestTooSmall,
+    plannedDeletes,
+    type itfFileItem,
+    type itfRunMeta,
+    type typJob,
+} from "@/shared/types";
 import styles from "./RunConfirmDialog.module.css";
 
 /**
@@ -124,6 +131,13 @@ export default function RunConfirmDialog(iProps: itfRunConfirmDialogProps) {
                         </li>
                     )}
                 </ul>
+                {preview.space && isDestTooSmall(preview.space) && (
+                    <p className={styles.warn}>
+                        대상 드라이브 여유({formatBytes(preview.space.dest?.free ?? 0)})가 옮길 크기(
+                        {formatBytes(preview.space.transferBytes)})보다 작습니다(비교 시점). 실행하면 공간이
+                        모자라 실패할 수 있습니다.
+                    </p>
+                )}
                 {_V.newer.length > 0 && (
                     <>
                         <p className={styles.warn}>

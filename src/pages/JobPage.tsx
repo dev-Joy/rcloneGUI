@@ -19,16 +19,24 @@ import ZBCBadge from "@/components/ZBCBadge";
 import ZBCButton from "@/components/ZBCButton";
 import {
     describeDirs,
+    describeSpace,
     chipName,
     describeChanges,
     hasChanges,
+    formatBytes,
     formatDateTime,
     formatDuration,
     messageOf,
 } from "@/lib/format";
 import { cloneJob } from "@/lib/job-defaults";
 import { unwrap, usablePreview, useApp } from "@/stores/app-store";
-import type { itfRunMeta, typItemStatus, typJob, typJobInput } from "@/shared/types";
+import {
+    isDestTooSmall,
+    type itfRunMeta,
+    type typItemStatus,
+    type typJob,
+    type typJobInput,
+} from "@/shared/types";
 import JobFileList from "./JobFileList";
 import JobFileTree from "./JobFileTree";
 import JobHistoryTable from "./JobHistoryTable";
@@ -274,6 +282,24 @@ export default function JobPage(iProps: itfJobPageProps) {
                     <span className={styles.arrow}>→</span>
                     <span className={styles.path}>{job.dest}</span>
                 </div>
+                {_V.shown?.space && (
+                    <div
+                        className={
+                            isDestTooSmall(_V.shown.space)
+                                ? `${styles.space} ${styles.spaceWarn}`
+                                : styles.space
+                        }
+                    >
+                        {/* 항목마다 끊기지 않게 묶고, 좁으면 항목 사이에서만 줄을 바꾼다 */}
+                        <span className={styles.spaceItem}>비교 시점</span>
+                        <span className={styles.spaceItem}>원본 {describeSpace(_V.shown.space.source)}</span>
+                        <span className={styles.spaceItem}>대상 {describeSpace(_V.shown.space.dest)}</span>
+                        <span className={styles.spaceItem}>
+                            옮길 크기 {formatBytes(_V.shown.space.transferBytes)}
+                        </span>
+                        {isDestTooSmall(_V.shown.space) && <b>대상 드라이브 여유가 옮길 크기보다 작습니다</b>}
+                    </div>
+                )}
             </header>
 
             <div className={styles.toolbar}>

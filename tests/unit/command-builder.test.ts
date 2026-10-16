@@ -16,6 +16,7 @@ import { describe, expect, it } from "vitest";
  */
 import {
     assertSafeArgs,
+    buildAboutArgs,
     buildArgs,
     buildFilterText,
     buildListArgs,
@@ -339,5 +340,42 @@ describe("동기화 범위 (F25)", () => {
 
     it("범위를 바꾸면 미리보기가 무효가 된다 (설정 지문)", () => {
         expect(jobHash(f_Scope("files"), null)).not.toBe(jobHash(f_Scope("folders"), null));
+    });
+});
+
+describe("buildAboutArgs (F20)", () => {
+    it("쓰기 · 삭제 옵션이 없다", () => {
+        const args = buildAboutArgs(makeJob(), "remote-x:", { defaultConfig: null });
+        for (const flag of ["--dry-run", "--max-delete", "--backup-dir", "--combined", "sync", "copy"]) {
+            expect(args).not.toContain(flag);
+        }
+        expect(args.some((arg) => arg.startsWith("--dump"))).toBe(false);
+    });
+
+    it("차단 목록에 걸리는 값이 들어오면 던진다", () => {
+        expect(() => buildAboutArgs(makeJob(), "--dump=bodies", { defaultConfig: null })).toThrow(
+            clsCommandError,
+        );
+        expect(() => buildAboutArgs(makeJob(), "remote-x:", { defaultConfig: "--dump-headers" })).toThrow(
+            clsCommandError,
+        );
+    });
+
+    it("용량만 묻는 읽기 전용 인자", () => {
+        expect(buildAboutArgs(makeJob(), "D:\\", { defaultConfig: null })).toEqual([
+            "about",
+            "D:\\",
+            "--json",
+        ]);
+    });
+
+    it("config는 작업 값, 없으면 설정 기본값", () => {
+        const args = buildAboutArgs(makeJob({ rcloneConfig: "C:\\conf\\a.conf" }), "remote-x:", {
+            defaultConfig: "C:\\d.conf",
+        });
+        expect(args).toEqual(["about", "remote-x:", "--json", "--config", "C:\\conf\\a.conf"]);
+        expect(buildAboutArgs(makeJob(), "remote-x:", { defaultConfig: "C:\\d.conf" })).toContain(
+            "C:\\d.conf",
+        );
     });
 });

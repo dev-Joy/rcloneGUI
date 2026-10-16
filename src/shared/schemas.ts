@@ -133,6 +133,12 @@ export const openTargetSchema = runRefSchema.extend({ target: z.enum(["runDir", 
 
 const countSchema = z.number().int().min(0);
 
+const spaceSchema = z.object({
+    total: z.number().nonnegative().nullable(),
+    used: z.number().nonnegative().nullable(),
+    free: z.number().nonnegative().nullable(),
+});
+
 // 저장된 실행 메타(DB 행, 예전 run.json)를 읽을 때 쓴다. 형태는 types.ts의 itfRunMeta와 같다.
 export const runMetaSchema = z.object({
     runId: runIdSchema,
@@ -159,6 +165,14 @@ export const runMetaSchema = z.object({
     errors: z.array(z.string()),
     details: z.enum(["read", "failed", "off"]).nullable().default(null),
     trigger: z.enum(["manual", "schedule"]).default("manual"),
+    space: z
+        .object({
+            source: spaceSchema.nullable(),
+            dest: spaceSchema.nullable(),
+            transferBytes: z.number().nonnegative(),
+        })
+        .nullable()
+        .default(null),
     dirs: z
         .object({
             make: countSchema,

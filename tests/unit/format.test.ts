@@ -14,7 +14,7 @@ import { describe, expect, it } from "vitest";
 /**
  *  Internal imports
  */
-import { describeChanges, describeDirs, dirActionLabel, hasChanges } from "@/lib/format";
+import { describeChanges, describeDirs, describeSpace, dirActionLabel, hasChanges } from "@/lib/format";
 import { emptyCounts, type itfDirCounts } from "@/shared/types";
 
 const f_Dirs = (patch: Partial<itfDirCounts>): itfDirCounts => ({
@@ -51,5 +51,14 @@ describe("폴더 작업 문구 (F25)", () => {
         expect(hasChanges({ ...run, dirs: null })).toBe(false);
         expect(describeChanges({ ...run, dirs: f_Dirs({ make: 3 }) })).toBe("대상에 폴더 3개 만듦");
         expect(describeDirs({ dirs: null })).toBe("");
+    });
+});
+
+describe("describeSpace (F20)", () => {
+    it("여유 / 전체, 모르는 값은 뺀다", () => {
+        expect(describeSpace({ total: 2048, used: 1024, free: 1024 })).toBe("여유 1.0 KB / 전체 2.0 KB");
+        expect(describeSpace({ total: null, used: null, free: 1024 })).toBe("여유 1.0 KB");
+        expect(describeSpace(null)).toBe("용량 확인 불가");
+        expect(describeSpace({ total: null, used: 5, free: null })).toBe("용량 확인 불가");
     });
 });

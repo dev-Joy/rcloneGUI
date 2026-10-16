@@ -131,6 +131,19 @@ export function buildListArgs(
     return args;
 }
 
+/** 용량을 묻는 about 인자 (F20). 읽기 전용이다. root는 aboutRoot()가 정한 드라이브 · 리모트 맨 위 */
+export function buildAboutArgs(
+    job: typJob,
+    root: string,
+    ctx: Pick<itfBuildContext, "defaultConfig">,
+): string[] {
+    const args: string[] = ["about", root, "--json"];
+    const config = job.rcloneConfig ?? ctx.defaultConfig;
+    if (config) args.push("--config", config);
+    assertSafeArgs(args);
+    return args;
+}
+
 /** 차단 목록의 옵션이 섞여 있으면 던진다. rclone을 띄우기 직전에도 한 번 더 부른다. */
 export function assertSafeArgs(args: readonly string[]): void {
     args.forEach((arg, index) => {

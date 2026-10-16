@@ -237,6 +237,16 @@
 - 앱을 켤 때 고르지 않은 작업의 실행 기록도 읽어 목록에 마지막 실행 시각 표시
 - rclone을 쓸 수 없으면 [이어서: … 비교] 비활성
 
+### [TASK_024] : (2026-10-16) [F20 용량 표시]
+
+- 명세: `docs/specs/2026-10-16-capacity.md`. 실험 Q(about), fixture `about-q.json`, rclone-notes 2026-10-16
+- `aboutRoot`(드라이브 · UNC · WSL · 리모트 맨 위), `buildAboutArgs`(읽기 전용, 차단 목록 검사), `parseAbout`
+- 성공한 미리보기 뒤 원본 · 대상 about을 동시에(30초 제한, 취소 시 함께 끝냄), 미리보기 통계 totalBytes를 옮길 크기로. 메타 `space`
+- 화면: 작업 화면 경로 아래 "비교 시점 · 원본 여유/전체 · 대상 여유/전체 · 옮길 크기", 대상 여유 < 옮길 크기면 경고(확인 창에도, 실행은 막지 않음)
+- 테스트: aboutRoot · buildAboutArgs · parseAbout · isDestTooSmall · describeSpace, 통합 1
+- R1: reviewer REJECTED — buildAboutArgs의 차단 목록 테스트 없음. R2 수정: 쓰기 옵션 없음 · 차단 값이면 던짐 테스트, f_RunCapture · f_RunList가 띄우기 직전 assertSafeArgs, rclone-notes에 앱이 묻는 뿌리 형태. app-verifier R1 APPROVED, 관찰 반영: 용량 줄을 항목별로 묶어 "옮길 크기 29 B"처럼 중간에서 끊기지 않게
+- R2: reviewer · app-verifier 모두 APPROVED. 확인 못 함: 리모트(Drive) 용량, about을 지원하지 않는 백엔드의 "용량 확인 불가" 화면
+
 ## Error
 
 ### [ERR_001] : (2026-10-11) oxlint `no-restricted-imports`의 `group: ["../*"]`가 `../lib/format`을 못 잡음 → TASK_003

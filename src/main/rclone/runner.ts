@@ -30,7 +30,10 @@ import {
     type typDetailsState,
     type itfDirCounts,
     type typRunTrigger,
+    type itfRunSpace,
+    type itfSpace,
 } from "@/shared/types";
+import { parseAbout } from "@/main/parsers/about";
 import { countItems, formatDirOps } from "@/main/parsers/combined";
 import {
     createLineSplitter,
@@ -43,18 +46,22 @@ import type { clsJobStore } from "@/main/store/job-store";
 import { formatRunId, type clsRunStore } from "@/main/store/run-store";
 import {
     assertSafeArgs,
+    buildAboutArgs,
     buildArgs,
     buildFilterText,
     buildListArgs,
     formatCommand,
     jobHash,
 } from "./command-builder";
-import { backupDirFor, destKey, isRemote } from "./paths";
+import { aboutRoot, backupDirFor, destKey, isRemote } from "./paths";
 
 /**
  *  Types 정의
  */
 const MAX_KEPT_ERRORS = 50;
+
+/** 용량 묻기(about) 시간 제한 (F20). 리모트는 느릴 수 있다 */
+const ABOUT_TIMEOUT_MS = 30_000;
 
 export interface itfRunnerDeps {
     jobs: clsJobStore;
@@ -78,6 +85,8 @@ interface itfActiveRun {
     listChildren: ChildProcess[];
     /** 미리보기 뒤 읽을 목록의 인자. 읽지 않으면 null */
     listArgs: { source: string[]; dest: string[] } | null;
+    /** 미리보기 뒤 용량을 묻는 about 인자 (F20). 뿌리를 알 수 없는 쪽은 null. 실행이면 null */
+    aboutArgs: { source: string[] | null; dest: string[] | null } | null;
     /** 대상이 로컬일 때 그 경로. 대상 폴더가 아직 없는지 판단에 쓴다 */
     localDest: string | null;
     /** 동기화 범위 (F25). 폴더 구조만이면 빈 원본 검사를 하지 않는다 */
@@ -110,6 +119,8 @@ async function f_IsMissingDirectory(path: string): Promise<boolean> {
 /** lsjson 하나를 띄워 stdout을 파일로 받는다. 종료 코드를 돌려준다 (시작하지 못하면 null). */
 function f_RunList(run: itfActiveRun, exe: string, args: string[], outFile: string): Promise<number | null> {
     const out = createWriteStream(outFile);
+    // 띄우기 직전에 차단 목록을 한 번 더 본다 (만들 때도 검사했다).
+    assertSafeArgs(args);
     const child = spawn(exe, args, { shell: false, windowsHide: true });
     run.listChildren.push(child);
     child.stdout.pipe(out);
@@ -133,6 +144,24 @@ function f_RunList(run: itfActiveRun, exe: string, args: string[], outFile: stri
     // 시작하기 전에 취소가 들어온 경우
     if (run.canceled) child.kill();
     return Promise.all([exited, written]).then(([code, ok]) => (ok ? code : null));
+}
+
+/** 짧은 rclone 명령(about)을 띄워 stdout을 문자열로 받는다. 실패 · 시간 초과(30초)면 null. 취소하면 함께 끝낸다 (F20) */
+function f_RunCapture(run: itfActiveRun, exe: string, args: string[]): Promise<string | null> {
+    return new Promise((resolve) => {
+        assertSafeArgs(args);
+        const child = spawn(exe, args, { shell: false, windowsHide: true, timeout: ABOUT_TIMEOUT_MS });
+        run.listChildren.push(child);
+        let out = "";
+        child.stdout.setEncoding("utf8");
+        child.stdout.on("data", (chunk: string) => {
+            out += chunk;
+        });
+        child.stderr.resume();
+        child.on("error", () => resolve(null));
+        child.on("close", (code) => resolve(code === 0 ? out : null));
+        if (run.canceled) child.kill();
+    });
 }
 
 /**
@@ -316,6 +345,12 @@ export class clsRcloneRunner {
                       dest: buildListArgs(job, "dest", { filterPath, defaultConfig }),
                   }
                 : null;
+        const f_About = (path: string): string[] | null => {
+            const rootPath = aboutRoot(path);
+            return rootPath === null ? null : buildAboutArgs(job, rootPath, { defaultConfig });
+        };
+        const aboutArgs =
+            kind === "preview" ? { source: f_About(job.source), dest: f_About(job.dest) } : null;
 
         const meta: itfRunMeta = {
             runId,
@@ -337,6 +372,7 @@ export class clsRcloneRunner {
             details: null,
             dirs: null,
             trigger,
+            space: null,
         };
         await this.deps.runs.write(meta);
 
@@ -345,6 +381,7 @@ export class clsRcloneRunner {
             child: null,
             listChildren: [],
             listArgs,
+            aboutArgs,
             localDest: isRemote(job.dest) ? null : job.dest,
             scope: job.options.scope,
             canceled: false,
@@ -384,6 +421,8 @@ export class clsRcloneRunner {
         const errors: string[] = [];
         /** 폴더 작업 (F25). 같은 폴더가 두 번 나와도 한 번만 */
         const dirOps = new Map<string, itfDirOp>();
+        /** 마지막 통계의 옮길 크기 (F20). 미리보기면 옮길 파일 크기 합이다 */
+        let transferBytes = 0;
         let exitCode: number | null = null;
 
         if (!run.canceled) {
@@ -397,6 +436,7 @@ export class clsRcloneRunner {
                 const parsed = parseLogLine(line);
                 if (!parsed) return;
                 if (parsed.progress) {
+                    transferBytes = parsed.progress.totalBytes;
                     this.deps.emit({ runId, jobId, type: "progress", payload: parsed.progress });
                 }
                 if (parsed.level === "error" && errors.length < MAX_KEPT_ERRORS) {
@@ -427,6 +467,7 @@ export class clsRcloneRunner {
         if (ops.length > 0) await writeFile(join(dir, "dirs.txt"), formatDirOps(ops), "utf8");
 
         const details = await this.readDetails(run, exe, dir, exitCode);
+        const space = await this.readSpace(run, exe, exitCode, transferBytes);
         const counts = countItems(await this.deps.runs.readItems(jobId, runId));
         const status = run.canceled ? "canceled" : exitCode === 0 ? "success" : "failed";
         // 원본이 비어 있으면 sync가 대상을 통째로 지우므로 실행을 막는다.
@@ -447,6 +488,7 @@ export class clsRcloneRunner {
             errors,
             details,
             dirs,
+            space,
             message: run.canceled
                 ? "취소"
                 : emptySource
@@ -458,6 +500,31 @@ export class clsRcloneRunner {
         await this.deps.runs.write(meta);
         this.deps.emit({ runId, jobId, type: "done", payload: meta });
         return meta;
+    }
+
+    /**
+     * 성공한 미리보기 뒤 원본 · 대상의 용량을 묻는다 (F20). 실패한 쪽은 null이고 미리보기 결과에는 영향이 없다.
+     */
+    private async readSpace(
+        run: itfActiveRun,
+        exe: string,
+        exitCode: number | null,
+        transferBytes: number,
+    ): Promise<itfRunSpace | null> {
+        if (run.aboutArgs === null || run.canceled || exitCode !== 0) return null;
+        const f_Ask = async (args: string[] | null): Promise<itfSpace | null> => {
+            if (args === null) return null;
+            const out = await f_RunCapture(run, exe, args);
+            if (out === null) return null;
+            try {
+                return parseAbout(out);
+            } catch {
+                return null;
+            }
+        };
+        const [source, dest] = await Promise.all([f_Ask(run.aboutArgs.source), f_Ask(run.aboutArgs.dest)]);
+        if (run.canceled) return null;
+        return { source, dest, transferBytes };
     }
 
     /**

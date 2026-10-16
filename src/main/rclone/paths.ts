@@ -73,6 +73,21 @@ export function backupRoot(dest: string): string | null {
     return null;
 }
 
+/**
+ * 용량을 물을 뿌리 (F20). 대상 폴더가 아직 없을 수 있어 드라이브(또는 공유 · 리모트) 맨 위를 묻는다.
+ * 로컬 `E:\a` → `E:\`, UNC · WSL `\\wsl.localhost\Ubuntu\home` → `\\wsl.localhost\Ubuntu\`, 리모트 `gd:a/b` → `gd:`.
+ * 드라이브를 알 수 없는 상대 경로는 null.
+ */
+export function aboutRoot(path: string): string | null {
+    const loc = parseLocation(path);
+    if (loc.kind === "remote") return `${loc.remote}:`;
+    const drive = /^([A-Za-z]:)[\\/]/.exec(loc.path);
+    if (drive) return `${drive[1]}\\`;
+    const unc = /^[\\/]{2}([^\\/]+)[\\/]([^\\/]+)/.exec(loc.path);
+    if (unc) return `\\\\${unc[1]}\\${unc[2]}\\`;
+    return null;
+}
+
 export function backupDirFor(dest: string, jobId: string, runId: string): string | null {
     const root = backupRoot(dest);
     if (root === null) return null;

@@ -188,6 +188,19 @@ describe.skipIf(rclone === null)("RcloneRunner + 실제 rclone", () => {
         expect(Number.isNaN(Date.parse(changed?.source?.modTime ?? ""))).toBe(false);
     });
 
+    it("미리보기 뒤 원본 · 대상 용량과 옮길 크기를 남긴다 (F20)", async () => {
+        const job = await f_SaveJob();
+        const meta = await f_Preview(job.id);
+        expect(meta.space?.dest?.free).toBeGreaterThan(0);
+        expect(meta.space?.source?.total).toBeGreaterThan(0);
+        // 옮길 파일: only-src.txt(8) + changed.txt(16)
+        expect(meta.space?.transferBytes).toBe(
+            Buffer.byteLength("new file") + Buffer.byteLength("version 2 longer"),
+        );
+        const done = await f_Execute(job.id, meta.runId, 1);
+        expect(done.space).toBeNull();
+    });
+
     it("상세 읽기를 끈 작업은 크기 · 시각 없이 지금처럼 (F11)", async () => {
         const job = await f_SaveJob({
             options: {

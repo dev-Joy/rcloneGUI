@@ -40,6 +40,23 @@
             align-items: center;
         }
 
+        .space {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 12px;
+            font-size: 11px;
+            color: var(--zbc-muted);
+        }
+
+        .spaceItem {
+            white-space: nowrap;
+        }
+
+        .spaceWarn {
+            color: var(--zbc-delete);
+        }
+
         .paths {
             grid-column: 1 / -1;
             display: flex;

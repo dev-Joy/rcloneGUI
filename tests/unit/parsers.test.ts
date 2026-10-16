@@ -24,8 +24,9 @@ import {
     parseDirOps,
 } from "@/main/parsers/combined";
 import { createLineSplitter, dirOpOf, formatErrorLine, parseLogLine } from "@/main/parsers/json-log";
+import { parseAbout } from "@/main/parsers/about";
 import { parseLsjson } from "@/main/parsers/lsjson";
-import { isDestNewer, type itfFileItem } from "@/shared/types";
+import { isDestNewer, isDestTooSmall, type itfFileItem } from "@/shared/types";
 
 // fixtures는 rclone v1.75.1 (Windows)에서 scripts/probes/rclone-probes.ps1로 받은 실제 출력이다.
 const f_Fixture = (name: string): string => readFileSync(join(__dirname, "../fixtures", name), "utf8");
@@ -267,5 +268,39 @@ describe("폴더 작업 (F25)", () => {
                 { path: "new", status: "add", isDir: true },
             ]),
         ).toEqual({ add: 0, change: 0, delete: 1, same: 0, error: 0 });
+    });
+});
+
+describe("parseAbout (F20)", () => {
+    it("실제 about --json 출력을 읽는다", () => {
+        const space = parseAbout(f_Fixture("about-q.json"));
+        expect(space.total).toBeGreaterThan(0);
+        expect(space.free).toBeGreaterThan(0);
+        expect((space.used ?? 0) + (space.free ?? 0)).toBeLessThanOrEqual(space.total ?? 0);
+    });
+
+    it("빠진 값은 null, 형식이 아니면 던진다", () => {
+        expect(parseAbout('{"free": 10}')).toEqual({ total: null, used: null, free: 10 });
+        expect(() => parseAbout("")).toThrow();
+        expect(() => parseAbout('{"free": -1}')).toThrow();
+    });
+});
+
+describe("isDestTooSmall (F20)", () => {
+    const f_Space = (free: number | null, transferBytes: number) => ({
+        source: null,
+        dest: { total: 100, used: 0, free },
+        transferBytes,
+    });
+
+    it("대상 여유가 옮길 크기보다 작으면 참", () => {
+        expect(isDestTooSmall(f_Space(10, 11))).toBe(true);
+        expect(isDestTooSmall(f_Space(10, 10))).toBe(false);
+    });
+
+    it("알 수 없으면 거짓", () => {
+        expect(isDestTooSmall(null)).toBe(false);
+        expect(isDestTooSmall(f_Space(null, 5))).toBe(false);
+        expect(isDestTooSmall({ source: null, dest: null, transferBytes: 5 })).toBe(false);
     });
 });

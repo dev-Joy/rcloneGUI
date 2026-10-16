@@ -126,6 +126,29 @@ export interface itfRunMeta {
     dirs: itfDirCounts | null;
     /** 누가 시작했는지 (F10). 예전 기록은 manual */
     trigger: typRunTrigger;
+    /** 미리보기 때의 용량 (F20). 실행 기록 · 예전 기록 · 실패한 미리보기는 null */
+    space: itfRunSpace | null;
+}
+
+/** 한쪽 드라이브(또는 리모트)의 용량 (F20, rclone about). 백엔드가 주지 않은 값은 null */
+export interface itfSpace {
+    total: number | null;
+    used: number | null;
+    free: number | null;
+}
+
+/** 미리보기 때의 용량 (F20). 읽지 못한 쪽은 null */
+export interface itfRunSpace {
+    source: itfSpace | null;
+    dest: itfSpace | null;
+    /** 옮길 파일 크기 합 (미리보기 통계 totalBytes) */
+    transferBytes: number;
+}
+
+/** 대상 여유가 옮길 크기보다 작은지 (F20). 알 수 없으면 false */
+export function isDestTooSmall(space: itfRunSpace | null): boolean {
+    const free = space?.dest?.free;
+    return space !== null && free !== null && free !== undefined && free < space.transferBytes;
 }
 
 /** 실행을 시작한 쪽. manual 사람이 누름, schedule 자동 실행 (F10) */

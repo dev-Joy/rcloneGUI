@@ -15,6 +15,7 @@ import { describe, expect, it } from "vitest";
  *  Internal imports
  */
 import {
+    aboutRoot,
     backupDirFor,
     backupRoot,
     destKey,
@@ -110,5 +111,21 @@ describe("destKey", () => {
         expect(destKey("D:\\Backup\\X\\")).toBe(destKey("d:/backup/x"));
         expect(destKey("remote-x:a/b/")).toBe(destKey("remote-x:a/b"));
         expect(destKey("D:\\backup\\x")).not.toBe(destKey("D:\\backup\\y"));
+    });
+});
+
+describe("aboutRoot (F20)", () => {
+    it.each([
+        ["C:\\work\\dst", "C:\\"],
+        ["d:/a/b", "d:\\"],
+        ["\\\\wsl.localhost\\Distro\\home\\me", "\\\\wsl.localhost\\Distro\\"],
+        ["\\\\server\\share\\x", "\\\\server\\share\\"],
+        ["remote-x:Backup/a", "remote-x:"],
+    ])("%s → %s", (path, root) => {
+        expect(aboutRoot(path)).toBe(root);
+    });
+
+    it("드라이브를 알 수 없는 상대 경로는 null", () => {
+        expect(aboutRoot("relative/dir")).toBeNull();
     });
 });

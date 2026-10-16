@@ -162,6 +162,12 @@ RunLog 'log-p6.jsonl' @('sync', 'src', 'dst', '--create-empty-src-dirs', '--filt
 "[exit $LASTEXITCODE]"; '--- real run directory lines'; Show 'log-p6.jsonl' | Select-String -Pattern 'Removing directory'
 '--- dst after (dstonly-withfile must remain)'; Tree 'dst' | Select-String -Pattern 'dstonly|dst-emptydir'
 
+Hdr 'Q. about --json (F20 capacity). Saved as tests/fixtures/about-q.json'
+$p = Start-Process -FilePath $Rclone -ArgumentList @('about', 'src', '--json') -NoNewWindow -Wait -PassThru -RedirectStandardOutput 'about-q.json' -RedirectStandardError 'about-q.err'
+"[exit $($p.ExitCode)]"; Show 'about-q.json'
+$p = Start-Process -FilePath $Rclone -ArgumentList @('about', 'missing-dir', '--json') -NoNewWindow -Wait -PassThru -RedirectStandardOutput 'about-missing.json' -RedirectStandardError 'about-missing.err'
+"[exit missing $($p.ExitCode)]"; Show 'about-missing.err'
+
 Hdr 'N. copy --dry-run --combined (are dst-only files reported as -?)'
 Setup
 & $Rclone copy src dst --dry-run --combined combined-n.txt --retries 1 --exclude 'node_modules/**' 2> $null
