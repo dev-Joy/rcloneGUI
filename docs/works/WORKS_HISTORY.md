@@ -300,6 +300,13 @@
 - R1: reviewer REJECTED — WORKS.md 줄이 스크립트 실수로 깨짐(+ fixture 시각을 손으로 바꿈, 출처 주석). app-verifier R1은 사용량 한도로 끊김(남은 시험 파일 4.8GB 정리). R2: reviewer REJECTED — WORKS.md 꼬리가 남음. R3: reviewer APPROVED. app-verifier R2 APPROVED(25MB/s 제한에서 평균 25 MB/s, 남은 시간이 실제와 1초 단위로 맞음, 끝날 때 값이 튀지 않음, 886 · 720 · 600px 잘림 없음)
 - 남은 것: 미리보기(dry-run)도 bytes를 보고해 1초 넘게 걸리는 미리보기(리모트 등)에서 '평균 … /s · 남은 시간'이 보일 수 있음(재현 못 함), 좁은 창에서 '남은 시간 약' / '25초'처럼 묶음 중간에서 줄이 바뀜, '마무리하는 중' 안내는 화면에서 못 봄(로컬은 100% 파일이 생기지 않음, fixture로만 확인)
 
+### [TASK_030] : (2026-10-17) [새 Drive 폴더로 동기화 · 백업 확인]
+
+- 사용자가 준 새 Drive 폴더를 리모트를 새로 만들지 않고 `gdrive-test,root_folder_id=<ID>:rclonegui-test`로 씀(맨 위가 아니라 하위 폴더 — sync가 기존 파일을 지우지 않게)
+- 앱(임시 프로필)에서 비교(추가 3, 크기 · 시각 읽음, 용량) → 동기화 → 원본 1개 고치고 1개 지움 → 비교(변경 1 · 삭제 1) → 삭제 확인 후 동기화 → Drive `.rclonegui-backup/drive/<실행>`에 이전 changed.txt("version 2 longer")와 only-src.txt → 재비교 같음 2 · "바뀔 것 없음"
+- 코드 변경 없음(문서만). 남은 것: fast-list
+- 참고: 사용자가 리모트를 자기 GCP client_id로 다시 만듦(공용 client_id 종료 문제 해소). 이전 테스트 폴더는 비어 있었음(휴지통 증가, 원인 미확인)
+
 ## Error
 
 ### [ERR_001] : (2026-10-11) oxlint `no-restricted-imports`의 `group: ["../*"]`가 `../lib/format`을 못 잡음 → TASK_003
