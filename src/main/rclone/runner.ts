@@ -361,7 +361,7 @@ export class clsRcloneRunner {
             }
             // 대상 폴더가 아직 없으면(첫 실행) 빈 목록으로 본다 (F11과 같다)
             const destMissing =
-                destCode === 3 && !isRemote(job.dest) && (await f_IsMissingDirectory(job.dest));
+                destCode === 3 && (isRemote(job.dest) || (await f_IsMissingDirectory(job.dest)));
             if (destCode !== 0 && !destMissing) {
                 throw new clsRunError(
                     "EXCLUDED_FAILED",
@@ -701,8 +701,9 @@ export class clsRcloneRunner {
         ]);
         if (run.canceled) return null;
         let destOk = destCode === 0;
-        // 대상 폴더가 아직 없으면(첫 실행) rclone은 exit 3을 낸다. 빈 목록으로 본다.
-        if (destCode === 3 && run.localDest !== null && (await f_IsMissingDirectory(run.localDest))) {
+        // 대상 폴더가 아직 없으면(첫 실행) rclone은 exit 3(폴더 없음)을 낸다. 빈 목록으로 본다.
+        // 로컬은 정말 없는지 한 번 더 보고, 리모트는 rclone의 exit 3을 믿는다 (rclone-notes 2026-10-16 Drive)
+        if (destCode === 3 && (run.localDest === null || (await f_IsMissingDirectory(run.localDest)))) {
             await writeFile(destFile, "[]", "utf8");
             destOk = true;
         }

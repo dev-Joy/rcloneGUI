@@ -151,6 +151,8 @@ if (!app.requestSingleInstanceLock()) {
         app.on("will-quit", () => database.close());
         const jobs = new clsJobStore(database);
         const runs = new clsRunStore(database, baseDir);
+        // 지난번에 앱이 실행 도중 꺼졌다면 그 기록은 "대기 중"으로 남아 있다. 실패로 닫는다.
+        await runs.closeInterrupted();
         const settings = new clsSettingsStore(database);
         const groups = new clsGroupStore(database, jobs);
 

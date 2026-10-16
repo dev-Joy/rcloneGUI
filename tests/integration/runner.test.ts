@@ -223,6 +223,24 @@ describe.skipIf(rclone === null)("RcloneRunner + 실제 rclone", () => {
         ).toEqual(["changed.txt", "only-dst.txt", "only-src.txt"]);
     });
 
+    it("리모트 대상 폴더가 아직 없어도(첫 실행) 크기 · 수정 시각과 제외됨을 읽는다", async () => {
+        // 네트워크 없이 리모트 경로를 흉내 낸다: 환경 변수로 만든 local 백엔드 리모트 (설정 파일 없음)
+        process.env.RCLONE_CONFIG_RGTEST_TYPE = "local";
+        try {
+            const job = await f_SaveJob({ dest: `rgtest:${join(work, "remote-dst")}` });
+            const preview = await f_Preview(job.id);
+            expect(preview.status).toBe("success");
+            expect(preview.details).toBe("read");
+            const items = await runs.readItems(job.id, preview.runId);
+            expect(items.find((i) => i.path === "only-src.txt")?.dest).toBeNull();
+            expect((await runner.readExcluded(job.id, preview.runId)).map((i) => i.path)).toEqual([
+                "node_modules/pkg/index.js",
+            ]);
+        } finally {
+            delete process.env.RCLONE_CONFIG_RGTEST_TYPE;
+        }
+    });
+
     it("미리보기 뒤 양쪽 크기 · 수정 시각을 붙인다 (F11)", async () => {
         const job = await f_SaveJob();
         const meta = await f_Preview(job.id);

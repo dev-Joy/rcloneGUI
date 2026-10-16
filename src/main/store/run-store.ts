@@ -101,6 +101,32 @@ export class clsRunStore {
             .run(meta.jobId, meta.runId, JSON.stringify(meta));
     }
 
+    /**
+     * 앱이 켜질 때 한 번 부른다. 대기 · 실행 중으로 남은 기록은 앱이 꺼지며 rclone도 끝난 것이므로 실패로 닫는다.
+     * 실제 동기화는 일부 파일만 바뀌었을 수 있다고 적는다. 닫은 기록 수를 돌려준다.
+     */
+    async closeInterrupted(now = new Date()): Promise<number> {
+        const rows = this.app.db
+            .prepare(`SELECT data FROM runs WHERE json_extract(data, '$.status') IN ('queued', 'running')`)
+            .all() as { data: string }[];
+        let closed = 0;
+        for (const row of rows) {
+            const meta = f_ParseRow(row);
+            if (!meta) continue;
+            await this.write({
+                ...meta,
+                status: "failed",
+                endedAt: now.toISOString(),
+                message:
+                    meta.kind === "execute"
+                        ? "앱이 꺼져 실행이 중단되었습니다. 일부 파일만 바뀌었을 수 있습니다. 다시 비교하세요"
+                        : "앱이 꺼져 비교가 중단되었습니다",
+            });
+            closed += 1;
+        }
+        return closed;
+    }
+
     async read(jobId: string, runId: string): Promise<itfRunMeta | null> {
         const row = this.app.db
             .prepare("SELECT data FROM runs WHERE job_id = ? AND run_id = ?")

@@ -279,6 +279,13 @@
 - 테스트: 필터 줄 · 이스케이프 · 지문, skip 스키마, 저장소, 방향 기호, 통합 2(빼면 실행 거부 → 다시 비교 → 그 파일은 그대로 → 성공 뒤 비움, 실패하면 그대로)
 - R1: reviewer · app-verifier 모두 APPROVED. 남은 것: 이름이 공백으로 끝나는 리모트 파일은 필터 줄 공백 처리 미확인, 목록 줄마다 Tab이 멈춤 · 메뉴를 닫으면 초점이 줄로 돌아가지 않음, 트리의 일어날 일 칸에서 기호 때문에 긴 배지가 잘림, 빼기 직후 [동기화] title 문구가 실제 이유와 다름, 취소 · 자동 실행 · 체인 · 200개 한도는 화면에서 못 봄
 
+### [TASK_028] : (2026-10-16) [Google Drive 실사용 확인과 수정 2건]
+
+- 사용자가 테스트 폴더로 리모트를 만듦(root_folder_id 지정). 읽기 확인(lsjson · about) → 앱에서 로컬 → Drive 비교 · 동기화 · 재비교(같음만)
+- 수정 1: 리모트 대상 폴더가 없을 때 lsjson exit 3을 빈 목록으로(readDetails · computeExcluded). 통합 테스트는 환경 변수 local 백엔드 리모트로 재현(고치기 전 실패 확인)
+- 수정 2: `clsRunStore.closeInterrupted` — 앱이 켜질 때 대기 · 실행 중 기록을 실패로 닫음(실제 동기화는 "일부 파일만 바뀌었을 수 있음"). 사용자가 누른 Drive 동기화 도중 빌드하려고 앱을 꺼서 드러남
+- 남은 것: 공용 client_id 종료 예고(자기 client_id로 리모트 재생성 필요), Drive 쪽 백업 폴더 · fast-list 미확인. 별도 reviewer · app-verifier 루프는 돌리지 않음(버그 수정 2건, 단위 · 통합 테스트와 실제 앱으로 확인)
+
 ## Error
 
 ### [ERR_001] : (2026-10-11) oxlint `no-restricted-imports`의 `group: ["../*"]`가 `../lib/format`을 못 잡음 → TASK_003

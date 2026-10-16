@@ -293,6 +293,59 @@ describe("작업·실행 저장소 (임시 폴더)", () => {
         expect(await store.clearSkipIf(saved.id, [])).toBe(false);
     });
 
+    it("앱이 켜질 때 대기 · 실행 중으로 남은 기록을 실패로 닫는다 (앱이 실행 도중 꺼짐)", async () => {
+        const runs = new clsRunStore(db, dir);
+        const base = {
+            jobId: "job-a",
+            exitCode: null,
+            counts: { add: 0, change: 0, delete: 0, same: 0, error: 0 },
+            startedAt: "2026-10-16T14:05:51.000Z",
+            endedAt: null,
+            jobHash: "h",
+            command: "rclone",
+            mode: "sync" as const,
+            backupDir: null,
+            blocked: null,
+            message: "대기 중",
+            errors: [],
+            details: null,
+            dirs: null,
+            trigger: "manual" as const,
+            space: null,
+        };
+        await runs.write({
+            ...base,
+            runId: "20261016-230441",
+            kind: "preview",
+            status: "success",
+            previewRunId: null,
+            message: "성공",
+        });
+        await runs.write({
+            ...base,
+            runId: "20261016-230551",
+            kind: "execute",
+            status: "queued",
+            previewRunId: "20261016-230441",
+        });
+        await runs.write({
+            ...base,
+            runId: "20261016-230600",
+            kind: "preview",
+            status: "running",
+            previewRunId: null,
+        });
+
+        const now = new Date("2026-10-16T14:10:00.000Z");
+        expect(await runs.closeInterrupted(now)).toBe(2);
+        const [preview, execute, done] = await runs.list("job-a");
+        expect(execute).toMatchObject({ status: "failed", endedAt: now.toISOString() });
+        expect(execute.message).toContain("일부 파일만 바뀌었을 수 있습니다");
+        expect(preview).toMatchObject({ status: "failed", message: "앱이 꺼져 비교가 중단되었습니다" });
+        expect(done).toMatchObject({ status: "success", message: "성공" });
+        expect(await runs.closeInterrupted(now)).toBe(0);
+    });
+
     it("실행 ID는 시각 형식이고, 같은 초에는 번호를 붙인다", async () => {
         const runs = new clsRunStore(db, dir);
         const at = new Date(2026, 9, 12, 15, 30, 5);
