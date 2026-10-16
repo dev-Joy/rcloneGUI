@@ -22,13 +22,14 @@ pnpm run dev
 
 ## 명령
 
-| 명령                            | 하는 일                                        |
-| ------------------------------- | ---------------------------------------------- |
-| `pnpm run dev`                  | 개발 실행                                      |
-| `pnpm run check`                | typecheck + lint(oxlint, eslint) + 단위 테스트 |
-| `pnpm run format`               | oxfmt로 포맷 (`format:check`는 검사만)         |
-| `pnpm run test:int`             | 실제 rclone으로 임시 폴더 통합 테스트          |
-| `pnpm run build` / `pnpm start` | `out/`에 빌드 / 빌드본 실행                    |
+| 명령                            | 하는 일                                             |
+| ------------------------------- | --------------------------------------------------- |
+| `pnpm run dev`                  | 개발 실행                                           |
+| `pnpm run check`                | typecheck + lint(oxlint, eslint) + 단위 테스트      |
+| `pnpm run format`               | oxfmt로 포맷 (`format:check`는 검사만)              |
+| `pnpm run test:int`             | 실제 rclone으로 임시 폴더 통합 테스트               |
+| `pnpm run build` / `pnpm start` | `out/`에 빌드 / 빌드본 실행                         |
+| `pnpm run dist`                 | Windows 설치 파일 `dist/rcloneGUI-Setup-<버전>.exe` |
 
 ## 안전장치
 
@@ -40,7 +41,14 @@ pnpm run dev
 
 ## 데이터 위치
 
-`%APPDATA%\rcloneGUI\` 아래 `jobs.json`, `settings.json`, `runs\<작업ID>\<실행ID>\{run.json, combined.txt, rclone.jsonl, filter.txt}`.
+`%APPDATA%\rcloneGUI\` 아래 `rclonegui.db`(작업 · 설정 · 실행 기록, SQLite)와 `runs\<작업ID>\<실행ID>\{combined.txt, rclone.jsonl, filter.txt, …}`.
+예전 버전의 `jobs.json` · `settings.json` · `run.json`은 처음 켤 때 가져오고 그대로 남겨 둔다 (ADR 0005).
+설치본을 제거해도 이 폴더는 지우지 않는다.
+
+## 설치본
+
+`pnpm run dist`로 만든 `rcloneGUI-Setup-<버전>.exe`는 사용자 단위로 설치한다(관리자 권한 불필요). 코드 서명이 없어 처음 실행할 때
+Windows SmartScreen 경고가 뜰 수 있다. rclone은 함께 설치하지 않으며, 설치된 rclone을 찾아 쓴다.
 
 ## 문서
 

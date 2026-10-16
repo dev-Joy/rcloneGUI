@@ -69,9 +69,10 @@ rclone을 감싼 Windows용 폴더 비교·동기화 데스크톱 앱. Electron 
 - `pnpm run format` — oxfmt로 포맷 (`pnpm run format:check`는 검사만)
 - `pnpm run test:int` — 실제 rclone으로 통합 테스트 (rclone이 없으면 이유를 출력하고 건너뜀)
 - `pnpm run build` — `out/`에 빌드, `pnpm start`로 빌드본 실행
+- `pnpm run dist` — Windows 설치 파일(NSIS, 사용자 단위)을 `dist/`에 만든다. 설정은 `electron-builder.yml`
 - `scripts/probes/rclone-probes.ps1` — rclone 동작 확인 (rclone을 올릴 때마다 재실행)
 
-Windows 설치본(`electron-builder`)은 아직 없다 (기획서 F12, P1).
+설치본은 코드 서명이 없다. 설치본에는 `out/`과 운영 의존성만 들어간다 (소스 · 테스트 · 문서 · 하네스 제외).
 
 ## 3. 구조
 

@@ -118,6 +118,118 @@
 - 기존 프로필(`%APPDATA%\Baton`)의 `jobs.json`과 `runs`를 새 프로필로 복사 (원본은 그대로 둠)
 - 확인: check · 통합 테스트 · 빌드 통과, 빌드본을 띄워 창 제목 · `window.rclonegui` · 비교 → 동기화 흐름과 새 백업 경로 확인
 
+### [TASK_012] : (2026-10-14) [GoodSync 참고 요구사항을 PRD에 반영]
+
+- GoodSync 12.11 화면(비교 트리 · 좌우 크기/날짜 · 용량 · 작업 그룹 · 기타 필터 · 항목별 방향)을 배치와 정보 구성만 참고. 바이너리 디컴파일은 하지 않음(EULA)
+- 사용자 선택: 화면 요소 전부, 항목별 동작은 표시 · 제외 · bisync 전부, 표기는 rcloneGUI의 "일어날 일" 원칙 유지
+- 사용자 메모 반영: 스케줄(cron · Windows 작업 스케줄러 · 앱 시작 시 등록) → F10 확장, WSL 경로 선택 UI → F24, 동기화 범위(전체 · 파일만 · 폴더 구조만) → F25, SQLite 저장 → F26, exe → F12, 작업별 옵션 파일 → F27, 옵션값 글자 수 제한 → F28, Google Drive 동기화 확인 → 9장
+- 안전 요구사항 SR-12(bisync) · SR-13(항목 선택 실행) · SR-14(스케줄 실행) · SR-15(옵션 파일) 추가
+- intent.md "하지 않는 것": 양방향 동기화 → "사람 확인 없는 충돌 해결"로 좁힘
+- 로드맵 v0.2 ~ v0.4 재편
+
+### [TASK_013] : (2026-10-14) [F26 SQLite 저장]
+
+- 명세: `docs/specs/2026-10-14-sqlite-store.md`, 결정: ADR 0005 (0004는 일부 대체)
+- `src/main/store/app-database.ts`: `rclonegui.db`(node:sqlite, WAL), 스키마 v1(`user_version`), 새 버전 DB 거부, 처음 열 때 예전 JSON을 한 트랜잭션으로 가져옴(원본 파일 유지, jobs.json이 깨지면 아무것도 넣지 않음)
+- 작업 · 설정 · 실행 저장소를 DB로. 실행 폴더의 combined.txt · rclone.jsonl · filter.txt는 그대로
+- 실행 목록은 기록 순번(seq) 역순. SR-01 최신 판단은 메타를 파싱하지 않는 `latestRunId`로 (reviewer R1 지적 반영)
+- `index.ts`: DB를 열지 못하면 오류 창 후 종료, `will-quit`에서 닫음
+- 테스트: `tests/unit/app-database.test.ts` 추가, 기존 저장소 · 통합 테스트를 새 생성자로
+- 검증: Round 2에서 reviewer · app-verifier 모두 APPROVED (R1 reviewer REJECTED: 설정 파싱 예외, 포맷, 문서)
+- 남은 확인 필요: 종료(will-quit) 중 끝나는 실행 기록은 running으로 남을 수 있음, `commands()`의 최신 판단은 아직 `list()[0]`
+
+### [TASK_014] : (2026-10-14) [F28 입력 글자 수 제한]
+
+- 명세: `docs/specs/2026-10-14-input-length-limits.md`
+- `src/shared/limits.ts`: `INPUT_LIMITS`(이름 100 · 경로 1024 · 제외 패턴 512자 · 200줄, 기존 값 유지)와 `findExcludeProblem`
+- `schemas.ts`: 상한을 `INPUT_LIMITS`로, 칸 이름이 든 한국어 메시지
+- 작업 편집 · 설정 창: 입력에 `maxLength`, 제외 패턴 칸에 줄 수 안내와 첫 문제 줄, 문제가 있으면 [저장] 끔
+- 테스트: 상한 경계와 메시지, 화면 검사 함수
+- 검증: Round 1에서 reviewer · app-verifier 모두 APPROVED
+
+### [TASK_015] : (2026-10-14) [F29 기본 폴더 위치]
+
+- 명세: `docs/specs/2026-10-14-default-folders.md` (사용자 요청)
+- 설정에 `defaultSource` · `defaultDest`(예전 설정 행은 `default(null)`로 읽음), 설정 창에 두 칸과 [폴더 선택]
+- `newJob(settings)`가 원본 · 대상을 채움. 복제는 그대로
+- `app:pickFolder`가 `"source" | "dest" | "settings"`를 받고 시작 위치는 main이 설정에서 정함(로컬에 있는 폴더일 때만). 화면이 경로를 넘기지 않음
+- 테스트: 예전 설정 행 읽기, `newJob` 채우기
+- 검증: Round 1에서 reviewer · app-verifier 모두 APPROVED. 사용자 판단 필요: 기존 작업 편집의 [폴더 선택]도 설정의 기본 폴더에서 열림
+
+### [TASK_016] : (2026-10-14) [F11 파일 상세]
+
+- 명세: `docs/specs/2026-10-14-file-details.md`. 실험: `rclone-probes.ps1` L 단계를 양쪽 lsjson으로, fixture `lsjson-l-src.json` · `lsjson-l-dst.json`, rclone-notes 2026-10-14
+- 작업 옵션 `readDetails`(기본 켬). 성공한 미리보기 뒤 원본 · 대상 `lsjson`을 동시에 실행해 실행 폴더에 저장, 메타 `details`(read · failed · off)
+- `buildListArgs`(읽기 전용, 차단 목록 검사), `parseLsjson`, `readItems`가 상세를 합침, `isDestNewer`
+- 화면: 비교 목록에 크기 · 수정 시각과 "대상이 더 최신", 실행 확인 창에 그 수와 목록, 상세 실패 안내, 작업 편집 체크박스
+- 검증: R1 · R2 모두 reviewer · app-verifier APPROVED. 확인 필요: SR-01 30분 기준점이 목록 읽기 끝난 시각(리모트에서 길어질 수 있음)
+- R1 뒤 후속(R2): 출력 스트림 오류 처리, 배너에 "크기 · 수정 시각 읽는 중", 취소 배너의 "(종료 코드 0) 취소" 중복 제거, `readItems` 단위 테스트, 명세에 `--skip-links`
+- 오류: lsjson 출력 파일 close가 프로세스 close보다 먼저 와 종료 코드를 null로 판정 → 두 이벤트를 모두 기다리게 고침 (통합 테스트로 발견)
+
+### [TASK_017] : (2026-10-14) [F19 비교 트리 보기]
+
+- 명세: `docs/specs/2026-10-14-compare-tree.md`
+- `src/lib/file-tree.ts`: `buildFileTree`(경로로 폴더, 폴더별 건수 · 크기 합 · 대상이 더 최신 수), `flattenTree`, `folderIds`, `initialCollapsed`(5,000줄 넘으면 모두 접음). 이름 순서는 `Intl.Collator("en", numeric)`로 고정(시스템 로캘에 따라 한글/영문 순서가 달라지는 것을 테스트로 발견)
+- 공용 `ZBCTreeTable`(가상 스크롤, 펼침 단추 · 더블클릭, treegrid 역할), 페이지 `JobFileTree`(6열, 폴더 요약), `JobPage`에 [트리 | 평면]
+- 테스트: `tests/unit/file-tree.test.ts`
+- R1: reviewer APPROVED, app-verifier REJECTED(950px에서 항목 열 폭 0, 폴더 요약 잘림). R2 수정: 열 폭(항목 minmax(160px, 3fr) · 일어날 일 minmax(150px, 1.6fr) · 크기 · 시각은 줄어듦), 요약 줄임표 + title, 머리글 scrollbar-gutter, 포커스 링, 줄 ID에 종류(d:/f:) 접두사, flattenTree useMemo, 펼침 단추 더블클릭 전파 막음, prd 6열
+- R2: reviewer APPROVED, app-verifier REJECTED(900 ~ 1266px에서 파일 줄의 "원본으로 덮어씀" + "대상이 더 최신"이 150px 칸을 넘쳐 양쪽 잘림). R3: reviewer · app-verifier 모두 APPROVED (900 ~ 1600px 측정, 배지 · 경고 잘림 없음). 남은 확인 필요: 트리 줄 user-select: none이라 이름을 드래그로 복사할 수 없음. R3 수정: 일어날 일 열 최소 190px, 배지만 줄임표로 줄고 경고는 남김, 칸 title, 줄 user-select: none
+
+### [TASK_018] : (2026-10-16) [F25 동기화 범위와 폴더 작업 미리보기]
+
+- 명세: `docs/specs/2026-10-14-sync-scope.md`. 실험: `rclone-probes.ps1` P1 ~ P5, fixture `log-p3d.jsonl` · `log-p5.jsonl`(경로 중립화), rclone-notes 2026-10-14
+- 발견: sync는 지금도 대상에만 있는 빈 폴더를 지우는데 combined에 나오지 않아 미리보기에 안 보였다
+- 작업 옵션 `scope`(files 기본 · all · folders), `--create-empty-src-dirs`, 폴더 구조만은 필터 끝에 `+ */` · `- *`
+- JSON 로그에서 폴더 작업(`dirOpOf`) → 실행 폴더 `dirs.txt`, 메타 `dirs`, `readItems`에 폴더 항목(isDir). `countItems`는 폴더를 세지 않음(삭제 수 · --max-delete는 파일 기준)
+- 화면: 편집 창 범위 라디오와 sync 빈 폴더 안내, 목록 · 트리의 폴더 배지, 칩 옆 폴더 작업 문구, 확인 창 폴더 목록, [동기화]는 폴더 작업만 있어도 켜짐(`hasChanges`), 실행 결과 배너
+- 결정(2026-10-16 사용자 확인): "폴더 구조만"에서만 SR-06 파일 수 검사 제외, ADR 0006. prd SR-06 문구 갱신
+- 테스트: 파서(실제 로그), 빌더(범위별 인자 · 필터), 트리(폴더 작업), 통합(빈 폴더 삭제 표시, 전체 범위, 폴더 구조만은 파일 불변)
+- R1: app-verifier APPROVED, reviewer REJECTED(필터에 걸린 파일만 든 대상 폴더를 "빈 폴더 지움"이라고 표시하지만 실제로는 남음 — 실험 P6로 재현). R2 수정: 미리보기는 "대상에만 있음 · 비어 있으면 지움", 로컬 대상 실행 뒤 실제 확인(remove/kept/verified, dirs.txt `=`), 리모트는 "지우기 시도", 확인 창 설명은 지울 폴더가 있을 때만, 실행 기록 건수에 폴더 작업, ADR 0006 근거 2 수정, rclone-notes P6, 통합 테스트 추가
+- R2: reviewer · app-verifier 모두 APPROVED. 남은 관찰: 평면 목록에서 남은 폴더(same)의 원본 칸에 경로가 보임, 필터에 걸린 파일만 든 대상 폴더가 있으면 비교마다 [동기화]가 켜짐, 파일 백업이 없는 실행에도 [백업] 링크가 보임(이전부터), 리모트 대상 문구 미확인
+
+### [TASK_019] : (2026-10-16) [F24 WSL 경로 선택]
+
+- 명세: `docs/specs/2026-10-16-wsl-path-picker.md`. 이 PC 확인: `wsl -l -q`는 UTF-16LE · CRLF, 멈춘 배포판은 경로 접근 시 켜짐
+- `src/main/system/wsl.ts`: `parseWslList`(UTF-16LE), `listWslDistros`(execFile wsl.exe, shell: false, 5초, 실패 시 빈 목록), `wslRoot`
+- IPC `app:wsl-distros`, `app:pickFolder` 입력 확장(`{ target, wslDistro }`). main이 배포판 이름을 실제 목록과 대조하고 경로는 main이 만듦
+- 작업 편집: 원본 · 대상 칸에 [WSL] 단추(배포판마다), 여는 동안 "WSL 여는 중…"과 비활성
+- 테스트: `tests/unit/wsl.test.ts`(실제 출력 바이트, 여러 배포판, 이름 · 입력 스키마)
+- R1: reviewer APPROVED. 후속(R2): wsl.exe를 `%SystemRoot%\System32` 절대 경로로(현재 폴더의 같은 이름 파일 방지), WSL 여는 동안 [폴더 선택]도 비활성(창 두 개 방지), prd F24 경로 표기, 단추 묶음이 줄바꿈되어 입력 칸이 커지던 것(app-verifier R1 관찰) → 한 줄 고정. R1 · R2 모두 reviewer · app-verifier APPROVED. 확인 못 함: 배포판이 둘 이상인 화면, WSL이 없는 PC, 실제 창 크기 조절(에뮬레이션으로 대신)
+
+### [TASK_020] : (2026-10-16) [F12 설치본]
+
+- 명세: `docs/specs/2026-10-16-installer.md`. 결정은 추천안(NSIS 사용자 단위, 자동 시작 기본 끔, 서명 없음), 사용자 "진행" 승인 후 `electron-builder` 26.15.3(MIT) 개발 의존성 추가
+- `electron-builder.yml`, `pnpm run dist` → `dist/rcloneGUI-Setup-0.1.0.exe`(약 113MB). app.asar에는 `out/` · `package.json` · 운영 의존성 8개만(소스 · 테스트 · 문서 · 하네스 0개 확인). 서명 상태 NotSigned
+- pnpm이 `electron-winstaller`(Squirrel용) 빌드 스크립트를 무시했다고 알림 — NSIS와 무관해 허용하지 않음
+- 설정 `launchAtLogin`(default false), 저장 시 설치본에서만 `app.setLoginItemSettings`, 앱 시작 때는 바꾸지 않음. IPC `app:info`(버전 · 설치본 여부 · 실제 등록 값), 설정 창 체크박스 · 차이 안내 · 버전
+- R1: reviewer REJECTED — 실제 값을 openAtLogin(Run 키만)으로 읽어 작업 관리자에서 끈 것이 안 보이고, 다른 설정 저장 때 setLoginItemSettings가 다시 켬. R2 수정: executableWillLaunchAtLogin으로 읽기, 체크박스를 바꿔 저장할 때만 반영(enabled 함께), 안내 문구, 명세
+- R2: reviewer · app-verifier 모두 APPROVED(풀린 설치본을 임시 프로필로: app.info, 다른 설정 저장 뒤 Run · StartupApproved 항목 0건, 기본 흐름). 확인 못 함: Setup.exe 설치 · 제거, 제거 뒤 데이터 보존, 자동 시작을 켜 저장 · 작업 관리자에서 끈 뒤 차이 안내 · 다시 켜기 — 사용자 PC 변경이라 승인 대기
+- 문서: README(명령, 데이터 위치를 SQLite로 갱신 — F26 때 빠졌던 것, 설치본 절), AGENTS.md 명령, THIRD_PARTY_NOTICES, CHANGELOG
+
+### [TASK_021] : (2026-10-16) [F10 1단계 앱 안 자동 실행 · SR-10]
+
+- 명세: `docs/specs/2026-10-16-schedule-in-app.md`. 사용자 "진행": 앱 안 스케줄 먼저, Windows 작업 스케줄러(SR-14)는 2단계
+- `src/shared/cron.ts`: 5필드 cron 파서(외부 라이브러리 없음), `nextScheduleTime`(간격 · cron), `cronProblem`(한국어 메시지)
+- `schedule.cron` · `schedule.paused`(default null), 실행 메타 `trigger`(manual · schedule)
+- `src/main/schedule/scheduler.ts`: 30초마다 확인, 켠 뒤부터 셈(놓친 차례 따라잡지 않음), 미리보기 → `autoStopReason`(실패 · 빈 원본 · 읽기 오류 · 자동 한도 초과) → 바뀔 것 없으면 끝 → `runner.execute()`(같은 검사) → 실패면 멈춤. 예외도 멈춤. 멈춤은 `jobs.setPaused` + Windows 알림 + `jobs:changed`
+- IPC `jobs:resume-schedule` · `jobs:changed`, `runner.isActive`, 작업 저장 시 다음 시각 재계산
+- 트레이: 자동 실행 작업이 있으면 창을 닫아도 숨김, 메뉴 [열기] [자동 실행 모두 멈추기] [종료], 첫 숨김 알림. 아이콘 `resources/icon.png`(`scripts/dev/make-icon.mjs`로 생성), 설치본 extraResources · win.icon
+- 화면: 작업 편집 "자동 실행" 칸(간격 · cron, 다음 예정 3개, 자동 삭제 한도, 틀린 cron이면 저장 막음), 작업 목록 "자동" · "자동 멈춤", 작업 화면 멈춤 배너와 [다시 켜기], 실행 기록 "자동"
+- 테스트: cron 15, 스케줄러 15(가짜 runner · 시계), 통합 2(실제 rclone 자동 실행, 한도 초과 멈춤)
+- R1: reviewer REJECTED — (1) 편집 창이 열려 있는 동안 멈춘 작업을 다른 칸만 고쳐 저장하면 paused가 null로 덮여 다시 돎, (2) 미리보기 중에 끄거나 멈춰도 미리보기 뒤 execute. R2 수정: save()는 paused를 저장된 값으로 유지(setPaused · resume으로만 바뀜), 실행 직전 작업을 다시 읽어 enabled · paused · 지금 자동 한도로 다시 판단, 작업 저장 · 삭제 시 트레이 상태 즉시 갱신. 테스트 3개 추가
+- R2: reviewer · app-verifier 모두 APPROVED. 확인 못 함: 트레이 메뉴 조작 · Windows 알림 표시, 미리보기 중 끄기(단위 테스트로만). 후속 후보: 자동 실행을 끈 채 틀린 cron이면 화면은 저장 허용 · main 거부, pause 중 예외 재발생 시 처리되지 않는 rejection, resume 뒤 트레이 갱신 5초 지연, 편집 창에 멈춤 표시 없음
+
+### [TASK_022] : (2026-10-16) [F09 체인 실행 · SR-11, F10 후속 정리]
+
+- 명세: `docs/specs/2026-10-16-chain-run.md`
+- 저장 검증 `assertChain`: 없는 작업 · 고리(A → B → A) 거부
+- 스케줄러: 앞 작업이 executed · nothing이면 chainNext를 같은 자동 흐름으로(뒤 작업의 자동 한도, enabled가 꺼져 있어도 체인으로 돎, paused는 존중), 방문 집합 · 최대 10, 멈춤 알림에 "(A에 이어서)", `chainSteps`
+- 화면: 작업 편집 "이 작업이 성공하면 이어서" 선택, 수동 실행 성공 뒤 [이어서: … 비교](실행은 사람이 확인 창에서)
+- F10 후속: 자동 실행을 끈 채 틀린 cron이면 화면도 저장 막음, 멈추는 중 재실패 시 던지지 않음(테스트), [다시 켜기] 뒤 트레이 즉시 갱신, 편집 창 멈춤 안내
+- 테스트: `tests/unit/chain.test.ts` 9, 스케줄러 1, 통합 1(실제 rclone 두 작업 체인과 앞 멈춤)
+- R1: reviewer REJECTED — 자동 실행이 꺼진 체인 대상이 멈추면 멈춤 배너 · [다시 켜기] · 목록 배지가 안 보임, 체인 대상의 자동 삭제 한도 칸이 안 보임, prd SR-11 미갱신. R2 수정: 멈춤 표시는 enabled와 무관하게, 자동 한도 칸은 자동 실행을 켰거나 다른 작업의 체인 대상이면 보이고 안내 한 줄, 고리 오류 문구, prd SR-11
+- R2: reviewer · app-verifier 모두 APPROVED. 후속 후보: 오류 알림이 저절로 닫히지 않고 편집 창 단추를 가림(기존), rclone을 못 쓸 때도 [이어서] 단추가 눌림
+
 ## Error
 
 ### [ERR_001] : (2026-10-11) oxlint `no-restricted-imports`의 `group: ["../*"]`가 `../lib/format`을 못 잡음 → TASK_003
