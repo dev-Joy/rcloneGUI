@@ -1,0 +1,31 @@
+# rcloneGUI Windows 설치본 (F12, docs/specs/2026-10-16-installer.md)
+# pnpm run dist → dist/rcloneGUI-Setup-<버전>.exe
+appId: io.github.dev-joy.rclonegui
+productName: rcloneGUI
+directories:
+    output: dist
+# 빌드 결과(out)와 package.json만 넣는다. 운영 의존성(dependencies)은 electron-builder가 node_modules에서 붙인다.
+# 소스 · 테스트 · 문서 · 하네스(.claude, .agents)는 넣지 않는다.
+files:
+    - out/**
+    - package.json
+# 트레이 · 알림 아이콘 (F10). main이 process.resourcesPath/icon.png로 읽는다
+extraResources:
+    - from: resources/icon.png
+      to: icon.png
+win:
+    icon: resources/icon.png
+    target:
+        - target: nsis
+          arch:
+              - x64
+nsis:
+    # 사용자 단위 설치 (관리자 권한 없이)
+    oneClick: false
+    perMachine: false
+    allowToChangeInstallationDirectory: true
+    createStartMenuShortcut: true
+    createDesktopShortcut: false
+    # 제거해도 %APPDATA%\rcloneGUI(작업 · 실행 기록)는 남긴다
+    deleteAppDataOnUninstall: false
+    artifactName: ${productName}-Setup-${version}.${ext}

@@ -28,6 +28,7 @@ electron은 devDependency로 설치하지만 앱을 실행하는 런타임이라
 | typescript           | 6.0.3   | Apache-2.0 | https://github.com/microsoft/TypeScript                |
 | vitest               | 5.0.3   | MIT        | https://github.com/vitest-dev/vitest                   |
 | oxlint               | 1.87.0  | MIT        | https://github.com/oxc-project/oxc                     |
+| electron-builder     | 26.15.3 | MIT        | https://github.com/electron-userland/electron-builder  |
 | oxfmt                | 0.72.0  | MIT        | https://github.com/oxc-project/oxc                     |
 | eslint               | 10.12.0 | MIT        | https://github.com/eslint/eslint                       |
 | typescript-eslint    | 8.71.1  | MIT        | https://github.com/typescript-eslint/typescript-eslint |
@@ -46,3 +47,12 @@ electron은 devDependency로 설치하지만 앱을 실행하는 런타임이라
 | rclone | MIT      | https://github.com/rclone/rclone |
 
 rclone은 사용자가 따로 설치한 실행 파일을 호출만 한다.
+
+## 설치 파일에 함께 들어가는 것 (`pnpm run dist`, 2026-10-16)
+
+설치 파일(`rcloneGUI-Setup-<버전>.exe`)의 설치 · 제거 프로그램은 electron-builder가 내려받는 아래 도구로 만들어지고, 그 일부가 설치 파일 안에 들어간다.
+
+| 이름                                      | 라이선스     | 출처                        |
+| ----------------------------------------- | ------------ | --------------------------- |
+| NSIS (Nullsoft Scriptable Install System) | zlib/libpng  | https://nsis.sourceforge.io |
+| nsis7z 플러그인 (7-Zip 압축 해제)         | GNU LGPL 2.1 | https://www.7-zip.org       |
