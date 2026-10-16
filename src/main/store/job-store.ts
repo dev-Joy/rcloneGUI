@@ -3,14 +3,13 @@
  *
  *  @author dev-Joy    2026-10-11
  *  @description
- *      - 작업 저장소 (jobs.json)와 저장 전 검증
+ *      - 작업 저장소 (rclonegui.db의 jobs 표)와 저장 전 검증
  */
 
 /**
  *  External imports
  */
 import { stat } from "node:fs/promises";
-import { join } from "node:path";
 import { z } from "zod";
 
 /**
@@ -19,7 +18,7 @@ import { z } from "zod";
 import { jobSchema } from "@/shared/schemas";
 import type { typJob, typJobInput } from "@/shared/types";
 import { backupRoot, isRemote, pathsOverlap } from "@/main/rclone/paths";
-import { readJson, writeJson } from "./json-file";
+import type { clsAppDatabase } from "./app-database";
 
 /**
  *  내부 함수
@@ -71,6 +70,26 @@ export function validateJobPaths(job: Pick<typJob, "source" | "dest" | "safety">
     }
 }
 
+/** 체인(F09): 이을 작업이 있어야 하고, 이어 가다 자기에게 돌아오는 고리는 안 된다 (SR-11) */
+export function assertChain(job: Pick<typJob, "id" | "schedule">, jobs: readonly typJob[]): void {
+    const next = job.schedule.chainNext;
+    if (next === null) return;
+    const byId = new Map(jobs.map((j) => [j.id, j]));
+    if (!byId.has(next)) throw new clsJobError("CHAIN_MISSING", "이어서 실행할 작업을 찾을 수 없습니다");
+    const seen = new Set([job.id]);
+    let current: string | null = next;
+    while (current !== null) {
+        if (seen.has(current)) {
+            throw new clsJobError(
+                "CHAIN_LOOP",
+                "이어서 실행하는 작업들이 고리를 이룹니다(같은 작업을 다시 지납니다). 고리는 만들 수 없습니다",
+            );
+        }
+        seen.add(current);
+        current = byId.get(current)?.schedule.chainNext ?? null;
+    }
+}
+
 /** 이름에서 ID를 만든다. 한글 이름처럼 쓸 글자가 없으면 job으로 시작한다. */
 export function makeJobId(name: string, taken: ReadonlySet<string>): string {
     const base =
@@ -86,17 +105,16 @@ export function makeJobId(name: string, taken: ReadonlySet<string>): string {
 }
 
 export class clsJobStore {
-    private readonly file: string;
     private jobs: typJob[] | null = null;
 
-    constructor(baseDir: string) {
-        this.file = join(baseDir, "jobs.json");
-    }
+    constructor(private readonly app: clsAppDatabase) {}
 
     async list(): Promise<typJob[]> {
         if (this.jobs === null) {
-            const raw = await readJson(this.file);
-            this.jobs = raw === null ? [] : z.array(jobSchema).parse(raw);
+            const rows = this.app.db.prepare("SELECT data FROM jobs ORDER BY position, id").all() as {
+                data: string;
+            }[];
+            this.jobs = z.array(jobSchema).parse(rows.map((row) => JSON.parse(row.data) as unknown));
         }
         return this.jobs;
     }
@@ -110,7 +128,13 @@ export class clsJobStore {
     async save(input: typJobInput): Promise<typJob> {
         const jobs = await this.list();
         const id = input.id || makeJobId(input.name, new Set(jobs.map((j) => j.id)));
-        const job: typJob = { ...input, id };
+        // 자동 실행 멈춤(paused)은 setPaused로만 바뀐다. 화면이 열어 둔 사이에 멈췄다면 화면 값으로 덮지 않는다 (F10 · SR-10).
+        const stored = jobs.find((j) => j.id === id);
+        const job: typJob = {
+            ...input,
+            id,
+            schedule: { ...input.schedule, paused: stored?.schedule.paused ?? null },
+        };
 
         validateJobPaths(job);
         if (job.safety.allowIgnoreErrors && !job.safety.backup) {
@@ -122,13 +146,30 @@ export class clsJobStore {
         if (job.schedule.chainNext === job.id) {
             throw new clsJobError("CHAIN_SELF", "작업을 자기 자신에게 이을 수 없습니다");
         }
+        assertChain(job, jobs);
         if (!isRemote(job.source)) await f_AssertDirectory(job.source);
 
         const index = jobs.findIndex((j) => j.id === id);
         const next = index === -1 ? [...jobs, job] : jobs.map((j) => (j.id === id ? job : j));
-        await writeJson(this.file, next);
+        // 새 작업은 맨 뒤에 붙고, 고친 작업은 자리를 지킨다.
+        this.app.db
+            .prepare(
+                `INSERT INTO jobs (id, position, data)
+                 VALUES (?, (SELECT COALESCE(MAX(position), -1) + 1 FROM jobs), ?)
+                 ON CONFLICT (id) DO UPDATE SET data = excluded.data`,
+            )
+            .run(id, JSON.stringify(job));
         this.jobs = next;
         return job;
+    }
+
+    /** 자동 실행 멈춤 상태만 바꾼다 (F10 · SR-10). 경로 검증 없이 schedule.paused만 고친다 */
+    async setPaused(jobId: string, paused: typJob["schedule"]["paused"]): Promise<typJob> {
+        const job = await this.get(jobId);
+        const next: typJob = { ...job, schedule: { ...job.schedule, paused } };
+        this.app.db.prepare("UPDATE jobs SET data = ? WHERE id = ?").run(JSON.stringify(next), jobId);
+        this.jobs = (await this.list()).map((j) => (j.id === jobId ? next : j));
+        return next;
     }
 
     async delete(jobId: string): Promise<void> {
@@ -138,7 +179,14 @@ export class clsJobStore {
             .map((j) =>
                 j.schedule.chainNext === jobId ? { ...j, schedule: { ...j.schedule, chainNext: null } } : j,
             );
-        await writeJson(this.file, next);
+        const { db } = this.app;
+        this.app.transaction(() => {
+            db.prepare("DELETE FROM jobs WHERE id = ?").run(jobId);
+            const update = db.prepare("UPDATE jobs SET data = ? WHERE id = ?");
+            for (const job of next) {
+                if (jobs.find((j) => j.id === job.id) !== job) update.run(JSON.stringify(job), job.id);
+            }
+        });
         this.jobs = next;
     }
 }

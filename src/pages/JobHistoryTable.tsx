@@ -12,7 +12,7 @@
  */
 import ZBCButton from "@/components/ZBCButton";
 import ZBCDot from "@/components/ZBCDot";
-import { countsLine, formatDateTime, formatDuration, RUN_STATUS_NAMES } from "@/lib/format";
+import { countsLine, describeDirs, formatDateTime, formatDuration, RUN_STATUS_NAMES } from "@/lib/format";
 import type { itfRunMeta } from "@/shared/types";
 import styles from "./JobHistoryTable.module.css";
 
@@ -81,11 +81,18 @@ export default function JobHistoryTable(iProps: itfJobHistoryTableProps) {
                                 className={run.runId === shownId ? styles.selected : undefined}
                             >
                                 <td className={styles.td}>{formatDateTime(run.startedAt)}</td>
-                                <td className={styles.td}>{run.kind === "preview" ? "미리보기" : "실행"}</td>
+                                <td className={styles.td}>
+                                    {run.trigger === "schedule" ? "자동 " : ""}
+                                    {run.kind === "preview" ? "미리보기" : "실행"}
+                                </td>
                                 <td className={styles.td}>
                                     <ZBCDot tone={run.status} /> {RUN_STATUS_NAMES[run.status]}
                                 </td>
-                                <td className={styles.td}>{countsLine(run.counts, run.mode)}</td>
+                                <td className={styles.td}>
+                                    {[countsLine(run.counts, run.mode), describeDirs(run)]
+                                        .filter(Boolean)
+                                        .join(" · ")}
+                                </td>
                                 <td className={styles.td}>{formatDuration(run)}</td>
                                 <td className={`${styles.td} ${styles.message}`} title={run.message}>
                                     {run.message}

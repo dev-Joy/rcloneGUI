@@ -3,7 +3,7 @@
  *
  *  @author dev-Joy    2026-10-11
  *  @description
- *      - 원본 · 일어날 일 · 대상 3열 비교 목록
+ *      - 원본 · 일어날 일 · 대상 3열 비교 목록. 상세를 읽었으면 양쪽 크기 · 수정 시각과 "대상이 더 최신" 경고 (F11)
  *      - 수만 줄도 보이는 줄만 그린다 (가상 스크롤)
  */
 
@@ -17,8 +17,8 @@ import { useRef } from "react";
  *  Internal imports
  */
 import ZBCBadge from "@/components/ZBCBadge";
-import { actionLabel } from "@/lib/format";
-import type { itfFileItem, itfRunMeta } from "@/shared/types";
+import { actionLabel, dirActionLabel, formatBytes, formatDateTime } from "@/lib/format";
+import { isDestNewer, type itfFileItem, type itfFileSide, type itfRunMeta } from "@/shared/types";
 import styles from "./JobFileList.module.css";
 
 /**
@@ -40,6 +40,11 @@ const propsDefault = {
 /**
  *  내부 함수
  */
+/** 한쪽 크기 · 수정 시각. 모르거나 없으면 null */
+function f_SideMeta(side: itfFileSide | null | undefined) {
+    if (!side) return null;
+    return `${formatBytes(side.size)} · ${formatDateTime(side.modTime)}`;
+}
 
 /**
  *  메인 컴포넌트
@@ -79,17 +84,39 @@ export default function JobFileList(iProps: itfJobFileListProps) {
     // 이벤트 핸들러 및 내부 함수
     //
 
-    /** 원본 쪽 칸. 원본에 없는 파일은 비운다 */
+    /** 원본 쪽 칸. 원본에 없는 파일은 비운다. 폴더 항목은 끝에 / */
     function f_SourceCell(item: itfFileItem) {
-        return item.status !== "delete" ? item.path : <span className={styles.missing}>없음</span>;
+        if (item.status === "delete") return <span className={styles.missing}>없음</span>;
+        return item.isDir ? `${item.path}/` : item.path;
     }
 
     /** 대상 쪽 칸. 대상에 아직 없는 파일은 비운다 */
     function f_DestCell(item: itfFileItem) {
         return item.status !== "add" || _V.executed ? (
-            item.path
+            item.isDir ? (
+                `${item.path}/`
+            ) : (
+                item.path
+            )
         ) : (
             <span className={styles.missing}>없음</span>
+        );
+    }
+
+    /** 경로 칸과 그 오른쪽의 크기 · 수정 시각 */
+    function f_Side(
+        item: itfFileItem,
+        cell: ReturnType<typeof f_SourceCell>,
+        side: itfFileSide | null | undefined,
+    ) {
+        const meta = f_SideMeta(side);
+        return (
+            <span className={styles.side}>
+                <span className={styles.path} title={item.path}>
+                    {cell}
+                </span>
+                {meta && <span className={styles.meta}>{meta}</span>}
+            </span>
         );
     }
 
@@ -107,21 +134,30 @@ export default function JobFileList(iProps: itfJobFileListProps) {
                     <div className={styles.rows} style={{ height: virtualizer.getTotalSize() }}>
                         {virtualizer.getVirtualItems().map((row) => {
                             const item = items[row.index];
+                            const newer = isDestNewer(item);
                             return (
                                 <div
-                                    key={item.path}
+                                    key={`${item.isDir ? "d" : "f"}:${item.path}`}
                                     className={`${styles.row} ${styles[item.status] ?? ""}`}
                                     style={{ height: rowHeight, transform: `translateY(${row.start}px)` }}
                                 >
-                                    <span className={styles.path} title={item.path}>
-                                        {f_SourceCell(item)}
+                                    {f_Side(item, f_SourceCell(item), item.source)}
+                                    <span className={styles.action}>
+                                        <ZBCBadge tone={item.status}>
+                                            {item.isDir
+                                                ? dirActionLabel(item.status, run)
+                                                : actionLabel(item.status, run, backup)}
+                                        </ZBCBadge>
+                                        {newer && (
+                                            <span
+                                                className={styles.newer}
+                                                title={`원본 ${f_SideMeta(item.source)}\n대상 ${f_SideMeta(item.dest)}`}
+                                            >
+                                                대상이 더 최신
+                                            </span>
+                                        )}
                                     </span>
-                                    <ZBCBadge tone={item.status}>
-                                        {actionLabel(item.status, run, backup)}
-                                    </ZBCBadge>
-                                    <span className={styles.path} title={item.path}>
-                                        {f_DestCell(item)}
-                                    </span>
+                                    {f_Side(item, f_DestCell(item), item.dest)}
                                 </div>
                             );
                         })}

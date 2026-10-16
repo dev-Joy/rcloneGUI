@@ -96,8 +96,35 @@
 
         .chips {
             display: flex;
+            align-items: center;
             gap: 6px;
             padding: 0 16px 8px;
+        }
+
+        .dirs {
+            font-size: 12px;
+            color: var(--zbc-muted);
+        }
+
+        .layouts {
+            display: flex;
+            border: 1px solid var(--zbc-border);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .layout {
+            border: 0;
+            padding: 2px 10px;
+            background: var(--zbc-surface);
+            color: var(--zbc-muted);
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .layoutOn {
+            background: var(--zbc-accent);
+            color: var(--zbc-accent-text);
         }
 
         .chip {
@@ -137,6 +164,37 @@
             background: var(--zbc-same-bg);
             color: var(--zbc-text);
             border-color: var(--zbc-same);
+        }
+
+        .chain {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 0 16px 8px;
+            padding: 8px 12px;
+            border: 1px solid var(--zbc-accent);
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .paused {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 0 16px 8px;
+            padding: 8px 12px;
+            border: 1px solid var(--zbc-delete);
+            border-radius: 6px;
+            background: var(--zbc-delete-bg);
+            font-size: 12px;
+        }
+
+        .notice {
+            margin: 0 16px 8px;
+            font-size: 12px;
+            color: var(--zbc-change);
         }
 
         .placeholder {

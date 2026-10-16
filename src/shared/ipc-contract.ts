@@ -18,6 +18,8 @@ import type {
     typResult,
     typRunEvent,
     itfRunMeta,
+    typPickFolderInput,
+    itfAppInfo,
     typSettings,
 } from "./types";
 
@@ -40,6 +42,10 @@ export interface itfRcloneGuiApi {
         list(): Promise<typResult<typJob[]>>;
         save(job: typJobInput): Promise<typResult<typJob>>;
         delete(jobId: string): Promise<typResult<null>>;
+        /** 스스로 멈춘 자동 실행을 다시 켠다 (F10) */
+        resumeSchedule(jobId: string): Promise<typResult<typJob>>;
+        /** main이 작업을 바꿨을 때 (자동 실행 멈춤 등). 화면은 목록을 다시 읽는다 */
+        onChanged(listener: () => void): () => void;
     };
     rclone: {
         status(): Promise<typResult<itfRcloneStatus>>;
@@ -63,9 +69,13 @@ export interface itfRcloneGuiApi {
         save(settings: typSettings): Promise<typResult<typSettings>>;
     };
     app: {
-        pickFolder(): Promise<typResult<string | null>>;
+        pickFolder(input: typPickFolderInput): Promise<typResult<string | null>>;
+        /** 설치된 WSL 배포판 (F24). WSL이 없으면 빈 목록 */
+        wslDistros(): Promise<typResult<string[]>>;
         pickFile(): Promise<typResult<string | null>>;
         copyText(text: string): Promise<typResult<null>>;
+        /** 버전 · 설치본 여부 · 로그인 시 시작 실제 값 (F12) */
+        info(): Promise<typResult<itfAppInfo>>;
         open(ref: itfRunRef & { target: "runDir" | "backupDir" }): Promise<typResult<null>>;
     };
 }
@@ -78,6 +88,8 @@ export const CHANNELS = {
     jobsList: "jobs:list",
     jobsSave: "jobs:save",
     jobsDelete: "jobs:delete",
+    jobsResumeSchedule: "jobs:resume-schedule",
+    jobsChanged: "jobs:changed",
     rcloneStatus: "rclone:status",
     rcloneRemotes: "rclone:remotes",
     runPreview: "run:preview",
@@ -90,6 +102,8 @@ export const CHANNELS = {
     settingsSave: "settings:save",
     appPickFolder: "app:pick-folder",
     appPickFile: "app:pick-file",
+    appWslDistros: "app:wsl-distros",
+    appInfo: "app:info",
     appCopyText: "app:copy-text",
     appOpen: "app:open",
     runEvent: "run:event",

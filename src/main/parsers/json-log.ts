@@ -36,6 +36,7 @@ const lineSchema = z.object({
     level: z.string().catch("info"),
     msg: z.string().catch(""),
     object: z.string().optional().catch(undefined),
+    skipped: z.string().optional().catch(undefined),
     stats: statsSchema.optional().catch(undefined),
 });
 
@@ -43,7 +44,15 @@ export interface itfLogLine {
     level: string;
     msg: string;
     object?: string;
+    /** dry-run에서 건너뛴 작업 이름 (예: "copy", "make directory") */
+    skipped?: string;
     progress?: itfProgress;
+}
+
+/** 폴더 작업 한 건 (F25) */
+export interface itfDirOp {
+    op: "make" | "remove";
+    path: string;
 }
 
 /**
@@ -61,8 +70,23 @@ export function parseLogLine(line: string): itfLogLine | null {
     }
     const parsed = lineSchema.safeParse(raw);
     if (!parsed.success) return null;
-    const { level, msg, object, stats } = parsed.data;
-    return { level, msg, object, progress: stats };
+    const { level, msg, object, skipped, stats } = parsed.data;
+    return { level, msg, object, skipped, progress: stats };
+}
+
+/**
+ * 로그 한 줄이 폴더 작업이면 돌려준다 (F25). 형식은 rclone-notes 2026-10-14 P3 · P5.
+ * 미리보기: skipped "make directory" / "remove directory". 실행: msg "Made directory…" / "Removing directory".
+ */
+export function dirOpOf(line: itfLogLine): itfDirOp | null {
+    if (!line.object) return null;
+    if (line.skipped === "make directory" || line.msg.startsWith("Made directory")) {
+        return { op: "make", path: line.object };
+    }
+    if (line.skipped === "remove directory" || line.msg === "Removing directory") {
+        return { op: "remove", path: line.object };
+    }
+    return null;
 }
 
 /** error 수준 줄을 사람이 읽는 한 줄로 */

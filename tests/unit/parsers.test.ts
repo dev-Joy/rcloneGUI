@@ -16,8 +16,16 @@ import { describe, expect, it } from "vitest";
 /**
  *  Internal imports
  */
-import { countItems, parseCombined, parseCombinedLine } from "@/main/parsers/combined";
-import { createLineSplitter, formatErrorLine, parseLogLine } from "@/main/parsers/json-log";
+import {
+    countItems,
+    formatDirOps,
+    parseCombined,
+    parseCombinedLine,
+    parseDirOps,
+} from "@/main/parsers/combined";
+import { createLineSplitter, dirOpOf, formatErrorLine, parseLogLine } from "@/main/parsers/json-log";
+import { parseLsjson } from "@/main/parsers/lsjson";
+import { isDestNewer, type itfFileItem } from "@/shared/types";
 
 // fixtures는 rclone v1.75.1 (Windows)에서 scripts/probes/rclone-probes.ps1로 받은 실제 출력이다.
 const f_Fixture = (name: string): string => readFileSync(join(__dirname, "../fixtures", name), "utf8");
@@ -151,5 +159,113 @@ describe("createLineSplitter", () => {
         expect(lines).toEqual(['{"a":1}', '{"b":2}']);
         splitter.flush();
         expect(lines).toEqual(['{"a":1}', '{"b":2}', '{"c":3}']);
+    });
+});
+
+describe("parseLsjson (F11)", () => {
+    it("실제 lsjson 출력을 경로 → 크기 · 수정 시각으로 읽는다", () => {
+        const source = parseLsjson(f_Fixture("lsjson-l-src.json"));
+        expect(source.size).toBe(5);
+        expect(source.get("changed.txt")).toEqual({ size: 16, modTime: "2026-10-14T15:52:03.7604525+09:00" });
+        expect(source.get("한글 dir/file with space.txt")?.size).toBe(1);
+        expect(source.get("sub/deep.txt")?.size).toBe(4);
+        const dest = parseLsjson(f_Fixture("lsjson-l-dst.json"));
+        expect(dest.get("changed.txt")?.size).toBe(9);
+        expect(dest.has("only-src.txt")).toBe(false);
+    });
+
+    it("폴더 항목은 빼고, 빈 배열은 빈 목록", () => {
+        const text = JSON.stringify([
+            { Path: "sub", Name: "sub", Size: -1, ModTime: "2026-10-01T10:00:00+09:00", IsDir: true },
+            { Path: "sub/a.txt", Name: "a.txt", Size: 3, ModTime: "2026-10-01T10:00:00+09:00", IsDir: false },
+        ]);
+        expect([...parseLsjson(text).keys()]).toEqual(["sub/a.txt"]);
+        expect(parseLsjson("[]").size).toBe(0);
+    });
+
+    it("형식이 아니면 던진다", () => {
+        expect(() => parseLsjson("")).toThrow();
+        expect(() => parseLsjson('[{"Path":"a"}]')).toThrow();
+    });
+});
+
+describe("isDestNewer (F11)", () => {
+    const f_Item = (patch: Partial<itfFileItem>): itfFileItem => ({
+        path: "a.txt",
+        status: "change",
+        source: { size: 1, modTime: "2026-10-14T10:00:00+09:00" },
+        dest: { size: 2, modTime: "2026-10-14T11:00:00+09:00" },
+        ...patch,
+    });
+
+    it("덮어쓸 파일의 대상이 더 나중이면 참", () => {
+        expect(isDestNewer(f_Item({}))).toBe(true);
+    });
+
+    it("시간대가 달라도 실제 시각으로 비교한다", () => {
+        // 10:30 UTC = 19:30 +09:00 → 대상(11:00 +09:00)보다 나중
+        expect(isDestNewer(f_Item({ source: { size: 1, modTime: "2026-10-14T10:30:00Z" } }))).toBe(false);
+    });
+
+    it("변경이 아니거나 상세가 없으면 거짓", () => {
+        expect(isDestNewer(f_Item({ status: "add" }))).toBe(false);
+        expect(isDestNewer(f_Item({ status: "same" }))).toBe(false);
+        expect(isDestNewer(f_Item({ dest: null }))).toBe(false);
+        expect(isDestNewer({ path: "a.txt", status: "change" })).toBe(false);
+    });
+});
+
+describe("폴더 작업 (F25)", () => {
+    const f_Ops = (name: string) =>
+        f_Fixture(name)
+            .split("\n")
+            .map(parseLogLine)
+            .map((line) => (line ? dirOpOf(line) : null))
+            .filter((op) => op !== null);
+
+    it("미리보기 로그(dry-run)에서 만들 폴더와 지울 빈 폴더를 읽는다", () => {
+        expect(f_Ops("log-p3d.jsonl")).toEqual([
+            { op: "make", path: "emptydir" },
+            { op: "make", path: "한글 dir" },
+            { op: "make", path: "emptydir/inner" },
+            { op: "remove", path: "dst-emptydir" },
+        ]);
+    });
+
+    it("실행 로그에서 만든 폴더와 지운 빈 폴더를 읽는다", () => {
+        expect(f_Ops("log-p5.jsonl")).toEqual([
+            { op: "make", path: "emptydir" },
+            { op: "make", path: "한글 dir" },
+            { op: "make", path: "emptydir/inner" },
+            { op: "remove", path: "dst-emptydir" },
+        ]);
+    });
+
+    it("폴더 수정 시각 맞추기 · 파일 작업 줄은 폴더 작업이 아니다", () => {
+        expect(f_Ops("log-a.jsonl")).toEqual([]);
+    });
+
+    it("dirs.txt로 쓰고 다시 읽으면 폴더 항목이 된다", () => {
+        const text = formatDirOps([
+            { op: "make", path: "한글 dir" },
+            { op: "remove", path: "old/empty" },
+            { op: "keep", path: "cache" },
+        ]);
+        expect(text).toBe("+ 한글 dir\n- old/empty\n= cache\n");
+        expect(parseDirOps(text)).toEqual([
+            { path: "한글 dir", status: "add", isDir: true },
+            { path: "old/empty", status: "delete", isDir: true },
+            { path: "cache", status: "same", isDir: true },
+        ]);
+    });
+
+    it("파일 건수에는 폴더 항목을 넣지 않는다 (삭제 수 · --max-delete는 파일 기준)", () => {
+        expect(
+            countItems([
+                { path: "a.txt", status: "delete" },
+                { path: "old/empty", status: "delete", isDir: true },
+                { path: "new", status: "add", isDir: true },
+            ]),
+        ).toEqual({ add: 0, change: 0, delete: 1, same: 0, error: 0 });
     });
 });

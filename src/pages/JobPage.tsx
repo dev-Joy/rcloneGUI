@@ -18,9 +18,10 @@ import { useEffect, useMemo, useState } from "react";
 import ZBCBadge from "@/components/ZBCBadge";
 import ZBCButton from "@/components/ZBCButton";
 import {
-    changeTotal,
+    describeDirs,
     chipName,
     describeChanges,
+    hasChanges,
     formatDateTime,
     formatDuration,
     messageOf,
@@ -29,6 +30,7 @@ import { cloneJob } from "@/lib/job-defaults";
 import { unwrap, usablePreview, useApp } from "@/stores/app-store";
 import type { itfRunMeta, typItemStatus, typJob, typJobInput } from "@/shared/types";
 import JobFileList from "./JobFileList";
+import JobFileTree from "./JobFileTree";
 import JobHistoryTable from "./JobHistoryTable";
 import styles from "./JobPage.module.css";
 import JobRunBanner from "./JobRunBanner";
@@ -46,6 +48,9 @@ export interface itfJobPageProps {
 }
 
 type typJobPageTab = "compare" | "history";
+
+/** 비교 결과 보기: 폴더 트리(F19) 또는 평면 목록 */
+type typCompareLayout = "tree" | "flat";
 
 const propsDefault = {
     refreshMs: 30_000,
@@ -68,7 +73,7 @@ const DEFAULT_FILTER: Record<typItemStatus, boolean> = {
 /** [동기화] 버튼 문구. 일어날 일을 적는다 */
 function f_SyncLabel(preview: itfRunMeta | null) {
     if (!preview) return "동기화 (먼저 비교)";
-    return changeTotal(preview) > 0 ? `동기화: ${describeChanges(preview)}` : "동기화: 바뀔 것 없음";
+    return hasChanges(preview) ? `동기화: ${describeChanges(preview)}` : "동기화: 바뀔 것 없음";
 }
 
 /**
@@ -85,16 +90,22 @@ export default function JobPage(iProps: itfJobPageProps) {
     const view = useApp((s) => s.views[job.id]);
     const rclone = useApp((s) => s.rclone);
     const startPreview = useApp((s) => s.preview);
+    const selectJob = useApp((s) => s.select);
+    /** 이어서 실행할 작업 (F09) */
+    const nextJob = useApp((s) => s.jobs.find((j) => j.id === job.schedule.chainNext) ?? null);
     const execute = useApp((s) => s.execute);
     const cancel = useApp((s) => s.cancel);
     const deleteJob = useApp((s) => s.deleteJob);
     const showRun = useApp((s) => s.showRun);
     const notify = useApp((s) => s.notify);
+    const resumeSchedule = useApp((s) => s.resumeSchedule);
 
     /** 비교 결과 / 실행 기록 탭 */
     const [tab, setTab] = useState<typJobPageTab>("compare");
     /** 상태 칩 필터 */
     const [filter, setFilter] = useState(DEFAULT_FILTER);
+    /** 트리 / 평면 보기 */
+    const [layout, setLayout] = useState<typCompareLayout>("tree");
     /** 확인 창을 연 미리보기. 그 미리보기가 무효가 되면 창도 닫힌다 */
     const [confirmingRunId, setConfirmingRunId] = useState<string | null>(null);
     /** 작업 삭제를 한 번 더 묻는 중인지 */
@@ -130,11 +141,22 @@ export default function JobPage(iProps: itfJobPageProps) {
         canRun: rclone !== null && rclone.problem === null,
         /** 필터 전 파일 수 */
         total: allItems?.length ?? 0,
+        /** 목록이 비었을 때 안내 */
+        emptyText:
+            (allItems?.length ?? 0) === 0
+                ? "표시할 파일이 없습니다"
+                : "선택한 상태의 파일이 없습니다. 위의 칩을 눌러 다른 상태를 보세요",
     };
 
     //
     // 이벤트 핸들러 및 내부 함수
     //
+
+    /** 체인의 다음 작업을 고르고 비교를 시작한다 (F09). 실행은 사람이 확인 창에서 한다 */
+    async function h_ChainNext(nextId: string) {
+        await selectJob(nextId);
+        await startPreview(nextId);
+    }
 
     /** 지금 실행에 쓸 수 있는 미리보기를 찾는다 */
     function f_Preview() {
@@ -261,7 +283,7 @@ export default function JobPage(iProps: itfJobPageProps) {
                 <ZBCButton
                     variant="primary"
                     onClick={h_Sync}
-                    disabled={!_V.canRun || _V.preview === null || changeTotal(_V.preview) === 0}
+                    disabled={!_V.canRun || _V.preview === null || !hasChanges(_V.preview)}
                     title={_V.preview ? undefined : "비교한 뒤 30분 안에만 실행할 수 있습니다"}
                 >
                     {f_SyncLabel(_V.preview)}
@@ -286,7 +308,33 @@ export default function JobPage(iProps: itfJobPageProps) {
                 </div>
             </div>
 
+            {job.schedule.paused && (
+                <div className={styles.paused}>
+                    <span>
+                        <b>자동 실행 멈춤</b> ({formatDateTime(job.schedule.paused.at)}):{" "}
+                        {job.schedule.paused.reason}. 확인한 뒤 다시 켜세요. 수동 비교 · 동기화는 그대로
+                        됩니다.
+                    </span>
+                    <ZBCButton small onClick={() => void resumeSchedule(job.id)}>
+                        다시 켜기
+                    </ZBCButton>
+                </div>
+            )}
             <JobRunBanner active={_V.active} progress={view?.progress ?? null} shown={_V.shown} />
+            {nextJob &&
+                _V.active === null &&
+                _V.shown?.kind === "execute" &&
+                _V.shown.status === "success" && (
+                    <div className={styles.chain}>
+                        <span>
+                            이 작업에 이어서 <b>{nextJob.name}</b>을(를) 실행하도록 되어 있습니다. 비교 결과를
+                            확인한 뒤 실행하세요.
+                        </span>
+                        <ZBCButton small onClick={() => void h_ChainNext(nextJob.id)}>
+                            이어서: {nextJob.name} 비교
+                        </ZBCButton>
+                    </div>
+                )}
 
             {tab === "compare" ? (
                 <>
@@ -302,17 +350,47 @@ export default function JobPage(iProps: itfJobPageProps) {
                                 {chipName(status, _V.shown?.mode ?? job.mode)} {_V.shown?.counts[status] ?? 0}
                             </button>
                         ))}
+                        {_V.shown && describeDirs(_V.shown) && (
+                            <span className={styles.dirs}>{describeDirs(_V.shown)}</span>
+                        )}
+                        <span className={styles.gap} />
+                        <div className={styles.layouts} role="group" aria-label="보기">
+                            {(["tree", "flat"] as const).map((value) => (
+                                <button
+                                    type="button"
+                                    key={value}
+                                    className={
+                                        layout === value
+                                            ? `${styles.layout} ${styles.layoutOn}`
+                                            : styles.layout
+                                    }
+                                    aria-pressed={layout === value}
+                                    onClick={() => setLayout(value)}
+                                >
+                                    {value === "tree" ? "트리" : "평면"}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                    {_V.shown ? (
+                    {_V.shown?.details === "failed" && (
+                        <div className={styles.notice}>
+                            크기 · 수정 시각을 읽지 못했습니다. 경로와 상태만 보여줍니다.
+                        </div>
+                    )}
+                    {_V.shown && layout === "tree" ? (
+                        <JobFileTree
+                            key={_V.shown.runId}
+                            items={items}
+                            run={_V.shown}
+                            backup={job.safety.backup}
+                            emptyText={_V.emptyText}
+                        />
+                    ) : _V.shown ? (
                         <JobFileList
                             items={items}
                             run={_V.shown}
                             backup={job.safety.backup}
-                            emptyText={
-                                _V.total === 0
-                                    ? "표시할 파일이 없습니다"
-                                    : "선택한 상태의 파일이 없습니다. 위의 칩을 눌러 다른 상태를 보세요"
-                            }
+                            emptyText={_V.emptyText}
                         />
                     ) : (
                         <div className={styles.placeholder}>

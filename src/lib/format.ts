@@ -94,14 +94,52 @@ export function changeTotal(run: Pick<itfRunMeta, "mode" | "counts">): number {
     return run.counts.add + run.counts.change + plannedDeletes(run);
 }
 
-/** "대상에 12개 복사, 3개 덮어씀, 1개 삭제"처럼 일어날 일을 적는다. */
-export function describeChanges(run: Pick<itfRunMeta, "mode" | "counts">): string {
+/** 폴더 작업 수 (F25). 예전 기록은 0 */
+export function dirTotal(run: Pick<itfRunMeta, "dirs">): number {
+    return run.dirs ? run.dirs.make + run.dirs.remove : 0;
+}
+
+/** 실행하면 대상에서 바뀌는 것이 있는지 (파일 또는 폴더) */
+export function hasChanges(run: Pick<itfRunMeta, "mode" | "counts" | "dirs">): boolean {
+    return changeTotal(run) + dirTotal(run) > 0;
+}
+
+/**
+ * 폴더 작업 한 줄. 없으면 빈 문자열.
+ * rclone은 대상에만 있는 폴더를 "지우기 시도"하고 비어 있지 않으면 남긴다(rclone-notes P6). 확인한 실행만 "지움"이라고 쓴다.
+ */
+export function describeDirs(run: Pick<itfRunMeta, "dirs">): string {
+    if (!run.dirs) return "";
+    const parts: string[] = [];
+    if (run.dirs.make > 0) parts.push(`폴더 ${run.dirs.make}개 만듦`);
+    if (run.dirs.verified) {
+        if (run.dirs.remove > 0) parts.push(`빈 폴더 ${run.dirs.remove}개 지움`);
+        if (run.dirs.kept > 0) parts.push(`폴더 ${run.dirs.kept}개 남김(파일이 있음)`);
+    } else if (run.dirs.remove > 0) {
+        parts.push(`대상에만 있는 폴더 ${run.dirs.remove}개(비어 있으면 지움)`);
+    }
+    return parts.join(", ");
+}
+
+/** "대상에 12개 복사, 3개 덮어씀, 1개 삭제, 폴더 2개 만듦"처럼 일어날 일을 적는다. */
+export function describeChanges(run: Pick<itfRunMeta, "mode" | "counts" | "dirs">): string {
     const parts: string[] = [];
     if (run.counts.add > 0) parts.push(`${run.counts.add}개 복사`);
     if (run.counts.change > 0) parts.push(`${run.counts.change}개 덮어씀`);
     const deletes = plannedDeletes(run);
     if (deletes > 0) parts.push(`${deletes}개 삭제`);
+    const dirs = describeDirs(run);
+    if (dirs) parts.push(dirs);
     return parts.length > 0 ? `대상에 ${parts.join(", ")}` : "바뀔 것 없음";
+}
+
+/** 폴더 항목의 일어날 일 (F25). 확인하지 못한 지우기는 "비어 있으면"을 붙인다 */
+export function dirActionLabel(status: typItemStatus, run: Pick<itfRunMeta, "kind" | "dirs">): string {
+    const done = run.kind === "execute";
+    if (status === "add") return done ? "폴더 만듦" : "폴더 만들기";
+    if (status === "same") return "남김 (파일이 있음)";
+    if (!done) return "대상에만 있음 · 비어 있으면 지움";
+    return run.dirs?.verified ? "빈 폴더 지움" : "지우기 시도 (비어 있을 때만)";
 }
 
 export function countsLine(counts: typCounts, mode: typJob["mode"]): string {

@@ -18,6 +18,7 @@ import {
     assertSafeArgs,
     buildArgs,
     buildFilterText,
+    buildListArgs,
     clsCommandError,
     formatCommand,
     jobHash,
@@ -120,7 +121,16 @@ describe("buildArgs", () => {
     });
 
     it("checkers·transfers·skip-links를 작업 옵션대로 넣는다", () => {
-        const job = makeJob({ options: { checkers: 2, transfers: 8, fastList: false, skipLinks: false } });
+        const job = makeJob({
+            options: {
+                checkers: 2,
+                transfers: 8,
+                fastList: false,
+                skipLinks: false,
+                readDetails: true,
+                scope: "files",
+            },
+        });
         const args = buildArgs(job, preview);
         expect(f_ValueOf(args, "--checkers")).toBe("2");
         expect(f_ValueOf(args, "--transfers")).toBe("8");
@@ -129,7 +139,14 @@ describe("buildArgs", () => {
     });
 
     it("--fast-list는 리모트가 낀 작업에만 넣는다", () => {
-        const options = { checkers: 2, transfers: 2, fastList: true, skipLinks: true };
+        const options = {
+            checkers: 2,
+            transfers: 2,
+            fastList: true,
+            skipLinks: true,
+            readDetails: true,
+            scope: "files" as const,
+        };
         expect(buildArgs(makeJob({ options }), preview)).not.toContain("--fast-list");
         expect(buildArgs(makeJob({ options, dest: "remote-x:Backup" }), preview)).toContain("--fast-list");
     });
@@ -163,7 +180,14 @@ describe("buildArgs", () => {
             makeJob({ mode: "copy" }),
             makeJob({
                 dest: "remote-x:Backup",
-                options: { checkers: 1, transfers: 1, fastList: true, skipLinks: false },
+                options: {
+                    checkers: 1,
+                    transfers: 1,
+                    fastList: true,
+                    skipLinks: false,
+                    readDetails: true,
+                    scope: "files",
+                },
             }),
             makeJob({ safety: { backup: true, autoMaxDelete: 0, allowIgnoreErrors: true } }),
         ];
@@ -230,7 +254,90 @@ describe("jobHash", () => {
         const original = jobHash(makeJob(), null);
         expect(jobHash(makeJob({ name: "다른 이름" }), null)).toBe(original);
         expect(
-            jobHash(makeJob({ schedule: { enabled: true, everyMinutes: 5, chainNext: null } }), null),
+            jobHash(
+                makeJob({
+                    schedule: { enabled: true, everyMinutes: 5, chainNext: null, cron: null, paused: null },
+                }),
+                null,
+            ),
         ).toBe(original);
+    });
+});
+
+describe("buildListArgs (F11)", () => {
+    const ctx = { filterPath: base.filterPath, defaultConfig: null };
+
+    it("한쪽 경로를 같은 필터 파일로 읽기만 한다", () => {
+        const job = makeJob();
+        expect(buildListArgs(job, "source", ctx)).toEqual([
+            "lsjson",
+            job.source,
+            "-R",
+            "--files-only",
+            "--filter-from",
+            base.filterPath,
+            "--skip-links",
+        ]);
+        expect(buildListArgs(job, "dest", ctx)[1]).toBe(job.dest);
+    });
+
+    it("쓰기 · 삭제 옵션이 없다", () => {
+        const args = buildListArgs(makeJob(), "dest", ctx);
+        for (const flag of ["--dry-run", "--max-delete", "--backup-dir", "--combined", "sync", "copy"]) {
+            expect(args).not.toContain(flag);
+        }
+    });
+
+    it("config와 fast-list는 동기화와 같은 조건으로 붙인다", () => {
+        const options = {
+            checkers: 2,
+            transfers: 2,
+            fastList: true,
+            skipLinks: false,
+            readDetails: true,
+            scope: "files" as const,
+        };
+        expect(buildListArgs(makeJob({ options }), "source", ctx)).not.toContain("--fast-list");
+        const remote = makeJob({ options, dest: "remote-x:Backup", rcloneConfig: "C:\\conf\\rclone.conf" });
+        const args = buildListArgs(remote, "dest", ctx);
+        expect(args).toContain("--fast-list");
+        expect(f_ValueOf(args, "--config")).toBe("C:\\conf\\rclone.conf");
+        expect(
+            f_ValueOf(buildListArgs(makeJob(), "dest", { ...ctx, defaultConfig: "C:\\d.conf" }), "--config"),
+        ).toBe("C:\\d.conf");
+    });
+
+    it("옵션처럼 보이는 경로는 스키마가 막고, 생성 결과는 차단 목록을 거친다", () => {
+        expect(() => buildListArgs(makeJob({ source: "--dump=bodies" }), "source", ctx)).toThrow(
+            clsCommandError,
+        );
+    });
+});
+
+describe("동기화 범위 (F25)", () => {
+    const f_Scope = (scope: "files" | "all" | "folders") =>
+        makeJob({ options: { ...makeJob().options, scope } });
+
+    it("파일만은 지금과 같고, 전체 · 폴더 구조만은 원본의 빈 폴더를 만든다", () => {
+        expect(buildArgs(f_Scope("files"), preview)).not.toContain("--create-empty-src-dirs");
+        expect(buildArgs(f_Scope("all"), preview)).toContain("--create-empty-src-dirs");
+        expect(buildArgs(f_Scope("folders"), execute)).toContain("--create-empty-src-dirs");
+    });
+
+    it("미리보기와 실행은 범위 옵션도 같다", () => {
+        const job = f_Scope("all");
+        const previewArgs = buildArgs(job, preview).filter((a) => a !== "--dry-run");
+        expect(previewArgs).toContain("--create-empty-src-dirs");
+        expect(buildArgs(job, execute)).toEqual(expect.arrayContaining(previewArgs.slice(0, 8)));
+    });
+
+    it("폴더 구조만은 제외 패턴 뒤에 폴더 포함 · 파일 제외 두 줄을 붙인다", () => {
+        expect(buildFilterText(["node_modules/**"], "folders")).toBe("- node_modules/**\n+ */\n- *\n");
+        expect(buildFilterText(["node_modules/**"], "all")).toBe("- node_modules/**\n");
+        expect(buildFilterText([], "files")).toBe("");
+    });
+
+    it("범위를 바꾸면 미리보기가 무효가 된다 (설정 지문)", () => {
+        expect(jobHash(f_Scope("files"), null)).not.toBe(jobHash(f_Scope("folders"), null));
     });
 });

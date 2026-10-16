@@ -14,7 +14,7 @@ import { createHash } from "node:crypto";
 /**
  *  Internal imports
  */
-import type { typJob } from "@/shared/types";
+import type { typJob, typSyncScope } from "@/shared/types";
 import { isRemote } from "./paths";
 
 /**
@@ -51,9 +51,15 @@ export class clsCommandError extends Error {
     }
 }
 
-/** 필터 파일 내용. 제외 패턴마다 `- 패턴` 한 줄. */
-export function buildFilterText(excludes: readonly string[]): string {
-    return excludes.map((pattern) => `- ${pattern}\n`).join("");
+/**
+ * 필터 파일 내용. 제외 패턴마다 `- 패턴` 한 줄.
+ * "폴더 구조만"(F25)이면 끝에 폴더는 포함하고(슬래시로 끝나는 패턴) 파일은 모두 제외하는 두 줄을 붙인다.
+ * 먼저 맞는 규칙이 이기므로 사용자의 제외 패턴이 우선한다.
+ */
+export function buildFilterText(excludes: readonly string[], scope: typSyncScope = "files"): string {
+    const lines = excludes.map((pattern) => `- ${pattern}\n`);
+    if (scope === "folders") lines.push("+ */\n", "- *\n");
+    return lines.join("");
 }
 
 /**
@@ -67,6 +73,8 @@ export function buildArgs(job: typJob, ctx: itfBuildContext): string[] {
     if (config) args.push("--config", config);
 
     args.push("--checkers", String(job.options.checkers), "--transfers", String(job.options.transfers));
+    // F25. "파일만"은 rclone 기본 동작이다.
+    if (job.options.scope !== "files") args.push("--create-empty-src-dirs");
     if (job.options.skipLinks) args.push("--skip-links");
     if (job.options.fastList && (isRemote(job.source) || isRemote(job.dest))) args.push("--fast-list");
 
@@ -98,6 +106,26 @@ export function buildArgs(job: typJob, ctx: itfBuildContext): string[] {
     }
 
     args.push("--combined", ctx.combinedPath, "--use-json-log", "-v", "--stats", "1s", "--retries", "1");
+
+    assertSafeArgs(args);
+    return args;
+}
+
+/**
+ * 미리보기 뒤 한쪽 목록을 읽는 lsjson 인자 (F11). 읽기 전용이다.
+ * 동기화와 같은 필터 파일 · config · fast-list 조건을 써서 같은 파일 집합을 본다.
+ */
+export function buildListArgs(
+    job: typJob,
+    side: "source" | "dest",
+    ctx: Pick<itfBuildContext, "filterPath" | "defaultConfig">,
+): string[] {
+    const args: string[] = ["lsjson", job[side], "-R", "--files-only", "--filter-from", ctx.filterPath];
+
+    const config = job.rcloneConfig ?? ctx.defaultConfig;
+    if (config) args.push("--config", config);
+    if (job.options.skipLinks) args.push("--skip-links");
+    if (job.options.fastList && (isRemote(job.source) || isRemote(job.dest))) args.push("--fast-list");
 
     assertSafeArgs(args);
     return args;

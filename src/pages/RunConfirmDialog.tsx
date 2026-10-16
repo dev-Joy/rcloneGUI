@@ -18,8 +18,8 @@ import { useState } from "react";
 import ZBCButton from "@/components/ZBCButton";
 import ZBCCheck from "@/components/ZBCCheck";
 import ZBCModal from "@/components/ZBCModal";
-import { changeTotal } from "@/lib/format";
-import { plannedDeletes, type itfFileItem, type itfRunMeta, type typJob } from "@/shared/types";
+import { changeTotal, describeDirs } from "@/lib/format";
+import { isDestNewer, plannedDeletes, type itfFileItem, type itfRunMeta, type typJob } from "@/shared/types";
 import styles from "./RunConfirmDialog.module.css";
 
 /**
@@ -66,8 +66,16 @@ export default function RunConfirmDialog(iProps: itfRunConfirmDialogProps) {
     const _V = {
         /** 실행하면 대상에서 지워질 파일 수 */
         deletes: plannedDeletes(preview),
+        /** 폴더 작업 (F25). 비어 있는 폴더만 지워지므로(파일은 지우지 않음) 삭제 확인 체크에는 넣지 않는다 */
+        dirItems: items.filter((item) => item.isDir),
+        dirsText: describeDirs(preview),
+        /** 원본으로 덮어쓰는데 대상이 더 최신인 파일 (F11) */
+        newer: items.filter(isDestNewer),
         /** 지워질 파일 목록 (copy는 지우지 않으므로 빈 목록) */
-        doomed: plannedDeletes(preview) > 0 ? items.filter((item) => item.status === "delete") : [],
+        doomed:
+            plannedDeletes(preview) > 0
+                ? items.filter((item) => item.status === "delete" && !item.isDir)
+                : [],
         backupText: job.safety.backup
             ? "지우거나 덮어쓰는 파일은 대상 드라이브의 .rclonegui-backup 폴더로 옮겨 둡니다."
             : "백업이 꺼져 있어 지우거나 덮어쓴 파일은 되돌릴 수 없습니다.",
@@ -116,6 +124,40 @@ export default function RunConfirmDialog(iProps: itfRunConfirmDialogProps) {
                         </li>
                     )}
                 </ul>
+                {_V.newer.length > 0 && (
+                    <>
+                        <p className={styles.warn}>
+                            대상이 원본보다 최신인 파일 {_V.newer.length}개를 원본으로 덮어씁니다
+                            {job.safety.backup ? " (이전 내용은 백업 폴더로 옮김)" : ""}.
+                        </p>
+                        <div className={styles.newerList}>
+                            {_V.newer.slice(0, maxListed).map((item) => (
+                                <div key={item.path}>{item.path}</div>
+                            ))}
+                            {_V.newer.length > maxListed && <div>… 외 {_V.newer.length - maxListed}개</div>}
+                        </div>
+                    </>
+                )}
+                {_V.dirsText && (
+                    <>
+                        <p className={styles.dirLead}>
+                            {_V.dirsText}.
+                            {(preview.dirs?.remove ?? 0) > 0 &&
+                                " 대상에만 있는 폴더는 비어 있을 때만 지워집니다. 파일이 들어 있으면(제외 패턴에 걸린 파일 포함) 폴더와 파일이 그대로 남습니다."}
+                        </p>
+                        <div className={styles.dirList}>
+                            {_V.dirItems.slice(0, maxListed).map((item) => (
+                                <div key={`${item.status}:${item.path}`}>
+                                    {item.status === "add" ? "+ " : "− "}
+                                    {item.path}/
+                                </div>
+                            ))}
+                            {_V.dirItems.length > maxListed && (
+                                <div>… 외 {_V.dirItems.length - maxListed}개</div>
+                            )}
+                        </div>
+                    </>
+                )}
                 <p className={styles.path}>대상: {job.dest}</p>
                 <p className={styles.path}>{_V.backupText}</p>
 

@@ -51,8 +51,28 @@ export function parseCombined(text: string): itfFileItem[] {
     return Array.from(byPath, ([path, status]) => ({ path, status }));
 }
 
+/** 상태별 파일 수. 폴더 작업 항목(isDir)은 세지 않는다 (삭제 수 · --max-delete는 파일 기준) */
 export function countItems(items: readonly itfFileItem[]): typCounts {
     const counts = emptyCounts();
-    for (const item of items) counts[item.status] += 1;
+    for (const item of items) if (!item.isDir) counts[item.status] += 1;
     return counts;
+}
+
+const DIR_OP_SYMBOL = { make: "+", remove: "-", keep: "=" } as const;
+
+/** 폴더 작업 목록을 dirs.txt 형식으로 (줄마다 "+ 경로" 만듦, "- 경로" 지움 · 지우기 시도, "= 경로" 지우려 했지만 남음) */
+export function formatDirOps(ops: readonly { op: "make" | "remove" | "keep"; path: string }[]): string {
+    return ops.map(({ op, path }) => `${DIR_OP_SYMBOL[op]} ${path}\n`).join("");
+}
+
+/** dirs.txt를 폴더 항목으로. 형식이 아닌 줄은 건너뛴다 */
+export function parseDirOps(text: string): itfFileItem[] {
+    const items: itfFileItem[] = [];
+    for (const line of text.split("\n")) {
+        const item = parseCombinedLine(line);
+        if (item && (item.status === "add" || item.status === "delete" || item.status === "same")) {
+            items.push({ ...item, isDir: true });
+        }
+    }
+    return items;
 }

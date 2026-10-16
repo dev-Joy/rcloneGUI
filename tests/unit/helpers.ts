@@ -20,9 +20,16 @@ export function makeJob(overrides: Partial<typJob> = {}): typJob {
         source: "C:\\work\\원본 폴더",
         dest: "D:\\backup\\대상 폴더",
         excludes: ["node_modules/**", "_session/**"],
-        options: { checkers: 4, transfers: 4, fastList: false, skipLinks: true },
+        options: {
+            checkers: 4,
+            transfers: 4,
+            fastList: false,
+            skipLinks: true,
+            readDetails: true,
+            scope: "files",
+        },
         safety: { backup: true, autoMaxDelete: 50, allowIgnoreErrors: false },
-        schedule: { enabled: false, everyMinutes: 30, chainNext: null },
+        schedule: { enabled: false, everyMinutes: 30, chainNext: null, cron: null, paused: null },
         rcloneConfig: null,
         ...overrides,
     };

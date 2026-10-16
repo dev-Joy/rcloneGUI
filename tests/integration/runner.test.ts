@@ -9,7 +9,7 @@
 /**
  *  External imports
  */
-import { mkdir, mkdtemp, readdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -19,6 +19,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
  */
 import { findRclone } from "@/main/rclone/locate";
 import { clsRcloneRunner } from "@/main/rclone/runner";
+import { clsScheduler } from "@/main/schedule/scheduler";
+import { openAppDatabase, type clsAppDatabase } from "@/main/store/app-database";
 import { clsJobStore } from "@/main/store/job-store";
 import { clsRunStore } from "@/main/store/run-store";
 import type { typJob, typJobInput, typRunEvent, itfRunMeta } from "@/shared/types";
@@ -41,6 +43,8 @@ let dst: string;
 let jobs: clsJobStore;
 
 let runs: clsRunStore;
+
+let database: clsAppDatabase;
 
 let runner: clsRcloneRunner;
 
@@ -71,6 +75,10 @@ async function f_Snapshot(root: string): Promise<Record<string, string>> {
     return out;
 }
 
+function f_Options(): typJob["options"] {
+    return { checkers: 4, transfers: 4, fastList: false, skipLinks: true, readDetails: true, scope: "files" };
+}
+
 async function f_SaveJob(patch: Partial<typJobInput> = {}): Promise<typJob> {
     return jobs.save({
         id: "",
@@ -79,9 +87,16 @@ async function f_SaveJob(patch: Partial<typJobInput> = {}): Promise<typJob> {
         source: src,
         dest: dst,
         excludes: ["node_modules/**"],
-        options: { checkers: 4, transfers: 4, fastList: false, skipLinks: true },
+        options: {
+            checkers: 4,
+            transfers: 4,
+            fastList: false,
+            skipLinks: true,
+            readDetails: true,
+            scope: "files",
+        },
         safety: { backup: true, autoMaxDelete: 50, allowIgnoreErrors: false },
-        schedule: { enabled: false, everyMinutes: 30, chainNext: null },
+        schedule: { enabled: false, everyMinutes: 30, chainNext: null, cron: null, paused: null },
         rcloneConfig: null,
         ...patch,
     });
@@ -117,8 +132,9 @@ describe.skipIf(rclone === null)("RcloneRunner + 실제 rclone", () => {
         await f_Put(join(dst, "node_modules", "pkg", "old.js"), "y");
 
         const appDir = join(work, "app");
-        jobs = new clsJobStore(appDir);
-        runs = new clsRunStore(appDir);
+        database = await openAppDatabase(appDir);
+        jobs = new clsJobStore(database);
+        runs = new clsRunStore(database, appDir);
         events = [];
         clock = () => new Date();
         runner = new clsRcloneRunner({
@@ -135,6 +151,7 @@ describe.skipIf(rclone === null)("RcloneRunner + 실제 rclone", () => {
     });
 
     afterEach(async () => {
+        database.close();
         await rm(work, { recursive: true, force: true });
     });
 
@@ -149,13 +166,208 @@ describe.skipIf(rclone === null)("RcloneRunner + 실제 rclone", () => {
         expect(meta.command).toContain("--dry-run");
 
         const items = await runs.readItems(job.id, meta.runId);
-        expect(items).toContainEqual({ path: "only-src.txt", status: "add" });
-        expect(items).toContainEqual({ path: "changed.txt", status: "change" });
-        expect(items).toContainEqual({ path: "only-dst.txt", status: "delete" });
+        expect(items).toContainEqual(expect.objectContaining({ path: "only-src.txt", status: "add" }));
+        expect(items).toContainEqual(expect.objectContaining({ path: "changed.txt", status: "change" }));
+        expect(items).toContainEqual(expect.objectContaining({ path: "only-dst.txt", status: "delete" }));
         expect(items.some((i) => i.path.startsWith("node_modules/"))).toBe(false);
 
         expect(events.filter((e) => e.runId === meta.runId).at(-1)?.type).toBe("done");
         expect((await runs.list(job.id))[0]).toEqual(meta);
+    });
+
+    it("미리보기 뒤 양쪽 크기 · 수정 시각을 붙인다 (F11)", async () => {
+        const job = await f_SaveJob();
+        const meta = await f_Preview(job.id);
+        expect(meta.details).toBe("read");
+        const items = await runs.readItems(job.id, meta.runId);
+        const changed = items.find((i) => i.path === "changed.txt");
+        expect(changed?.source?.size).toBe(Buffer.byteLength("version 2 longer"));
+        expect(changed?.dest?.size).toBe(Buffer.byteLength("version 1"));
+        expect(items.find((i) => i.path === "only-src.txt")?.dest).toBeNull();
+        expect(items.find((i) => i.path === "only-dst.txt")?.source).toBeNull();
+        expect(Number.isNaN(Date.parse(changed?.source?.modTime ?? ""))).toBe(false);
+    });
+
+    it("상세 읽기를 끈 작업은 크기 · 시각 없이 지금처럼 (F11)", async () => {
+        const job = await f_SaveJob({
+            options: {
+                checkers: 4,
+                transfers: 4,
+                fastList: false,
+                skipLinks: true,
+                readDetails: false,
+                scope: "files",
+            },
+        });
+        const meta = await f_Preview(job.id);
+        expect(meta.details).toBe("off");
+        const items = await runs.readItems(job.id, meta.runId);
+        expect(items.every((i) => i.source === undefined && i.dest === undefined)).toBe(true);
+    });
+
+    it("대상 폴더가 아직 없으면 대상 목록을 비어 있는 것으로 읽는다 (F11)", async () => {
+        const job = await f_SaveJob({ dest: join(work, "new-dest") });
+        const meta = await f_Preview(job.id);
+        expect(meta).toMatchObject({ status: "success", details: "read" });
+        const items = await runs.readItems(job.id, meta.runId);
+        expect(items.length).toBeGreaterThan(0);
+        expect(items.every((i) => i.status === "add" && i.dest === null && i.source !== null)).toBe(true);
+    });
+
+    it("실제 실행 기록에는 상세가 없다 (F11)", async () => {
+        const job = await f_SaveJob();
+        const first = await f_Preview(job.id);
+        const done = await f_Execute(job.id, first.runId, 1);
+        expect(done.details).toBeNull();
+    });
+
+    it("sync는 대상에만 있는 빈 폴더를 지우고, 미리보기에 그 폴더가 보인다 (F25)", async () => {
+        await mkdir(join(dst, "dst-empty"), { recursive: true });
+        const job = await f_SaveJob();
+        const preview = await f_Preview(job.id);
+        expect(preview.dirs).toEqual({ make: 0, remove: 1, kept: 0, verified: false });
+        expect(preview.counts.delete).toBe(1);
+        const items = await runs.readItems(job.id, preview.runId);
+        expect(items).toContainEqual({ path: "dst-empty", status: "delete", isDir: true });
+
+        const done = await f_Execute(job.id, preview.runId, 1);
+        expect(done).toMatchObject({
+            status: "success",
+            dirs: { make: 0, remove: 1, kept: 0, verified: true },
+        });
+        await expect(stat(join(dst, "dst-empty"))).rejects.toThrow();
+    });
+
+    it("필터에 걸린 파일만 든 대상 폴더는 지우기 시도로 보이고, 실행 뒤 남은 것으로 기록된다 (F25, rclone-notes P6)", async () => {
+        // 폴더 구조만은 모든 파일을 걸러 내므로 대상에만 있는 폴더 안의 파일도 필터에 걸린다
+        await f_Put(join(dst, "dstonly-withfile", "x.txt"), "kept");
+        const job = await f_SaveJob({ options: { ...f_Options(), scope: "folders" } });
+        const preview = await f_Preview(job.id);
+        expect(preview.dirs).toMatchObject({ remove: 1, verified: false });
+        expect(await runs.readItems(job.id, preview.runId)).toContainEqual({
+            path: "dstonly-withfile",
+            status: "delete",
+            isDir: true,
+        });
+
+        const done = await f_Execute(job.id, preview.runId, 0);
+        expect(done.dirs).toMatchObject({ remove: 0, kept: 1, verified: true });
+        expect(await runs.readItems(job.id, done.runId)).toContainEqual({
+            path: "dstonly-withfile",
+            status: "same",
+            isDir: true,
+        });
+        expect(await readFile(join(dst, "dstonly-withfile", "x.txt"), "utf8")).toBe("kept");
+    });
+
+    it("전체 범위는 원본의 빈 폴더까지 만든다 (F25)", async () => {
+        await mkdir(join(src, "empty", "inner"), { recursive: true });
+        const job = await f_SaveJob({ options: { ...f_Options(), scope: "all" } });
+        const preview = await f_Preview(job.id);
+        const made = (await runs.readItems(job.id, preview.runId)).filter(
+            (i) => i.isDir && i.status === "add",
+        );
+        expect(made.map((i) => i.path)).toEqual(expect.arrayContaining(["empty", "empty/inner"]));
+
+        await f_Execute(job.id, preview.runId, 1);
+        expect((await stat(join(dst, "empty", "inner"))).isDirectory()).toBe(true);
+    });
+
+    it("폴더 구조만은 파일을 하나도 바꾸지 않고 폴더만 만든다 (F25)", async () => {
+        await mkdir(join(src, "empty"), { recursive: true });
+        const before = await f_Snapshot(dst);
+        const job = await f_SaveJob({ options: { ...f_Options(), scope: "folders" } });
+        const preview = await f_Preview(job.id);
+        // 파일은 모두 걸러지므로 빈 원본 차단(SR-06)에 걸리지 않고, 삭제할 파일도 없다
+        expect(preview).toMatchObject({ status: "success", blocked: null });
+        expect(preview.counts).toEqual({ add: 0, change: 0, delete: 0, same: 0, error: 0 });
+        expect(preview.dirs?.make).toBeGreaterThan(0);
+
+        await f_Execute(job.id, preview.runId, 0);
+        expect(await f_Snapshot(dst)).toEqual(before);
+        expect((await stat(join(dst, "empty"))).isDirectory()).toBe(true);
+        expect((await stat(join(dst, "sub"))).isDirectory()).toBe(true);
+    });
+
+    it("자동 실행: 삭제가 자동 한도 이하면 미리보기 뒤 실행하고 기록에 자동으로 남는다 (F10 · SR-10)", async () => {
+        const job = await f_SaveJob({
+            schedule: { enabled: true, everyMinutes: 30, chainNext: null, cron: null, paused: null },
+            safety: { backup: true, autoMaxDelete: 1, allowIgnoreErrors: false },
+        });
+        const notes: string[] = [];
+        const scheduler = new clsScheduler({
+            jobs,
+            runner,
+            notify: (_t, body) => notes.push(body),
+            onJobsChanged: () => undefined,
+        });
+        const outcome = await scheduler.runJob(job.id);
+        expect(outcome.action).toBe("executed");
+        const [executed, preview] = await runs.list(job.id);
+        expect(preview).toMatchObject({ kind: "preview", trigger: "schedule" });
+        expect(executed).toMatchObject({ kind: "execute", trigger: "schedule", status: "success" });
+        // 제외 패턴(node_modules)은 양쪽 모두 비교에서 뺀다
+        const f_Files = async (root: string) =>
+            Object.keys(await f_Snapshot(root))
+                .filter((f) => !f.startsWith("node_modules/"))
+                .sort();
+        expect(await f_Files(dst)).toEqual(await f_Files(src));
+        expect(notes).toEqual([]);
+    });
+
+    it("자동 실행: 삭제가 자동 한도를 넘으면 실행하지 않고 멈춘다 (F10 · SR-10)", async () => {
+        await f_Put(join(dst, "extra-1.txt"), "x");
+        await f_Put(join(dst, "extra-2.txt"), "y");
+        const job = await f_SaveJob({
+            schedule: { enabled: true, everyMinutes: 30, chainNext: null, cron: null, paused: null },
+            safety: { backup: true, autoMaxDelete: 1, allowIgnoreErrors: false },
+        });
+        const before = await f_Snapshot(dst);
+        const notes: string[] = [];
+        const scheduler = new clsScheduler({
+            jobs,
+            runner,
+            notify: (_t, body) => notes.push(body),
+            onJobsChanged: () => undefined,
+        });
+        const outcome = await scheduler.runJob(job.id);
+        expect(outcome).toEqual({ action: "paused", reason: "삭제 3개가 자동 한도 1개를 넘습니다" });
+        expect(await f_Snapshot(dst)).toEqual(before);
+        expect((await jobs.get(job.id)).schedule.paused?.reason).toBe("삭제 3개가 자동 한도 1개를 넘습니다");
+        expect((await runs.list(job.id)).map((r) => r.kind)).toEqual(["preview"]);
+        expect(notes[0]).toContain("자동 실행을 멈췄습니다");
+    });
+
+    it("체인: 앞 작업이 성공하면 뒤 작업이 이어서 돌고, 앞이 멈추면 뒤는 돌지 않는다 (F09 · SR-11)", async () => {
+        const second = join(work, "second");
+        await mkdir(second, { recursive: true });
+        const b = await f_SaveJob({ name: "Chain B", source: dst, dest: second });
+        const a = await f_SaveJob({
+            name: "Chain A",
+            schedule: { enabled: true, everyMinutes: 30, chainNext: b.id, cron: null, paused: null },
+            safety: { backup: true, autoMaxDelete: 5, allowIgnoreErrors: false },
+        });
+        const scheduler = new clsScheduler({
+            jobs,
+            runner,
+            notify: () => undefined,
+            onJobsChanged: () => undefined,
+        });
+        expect(await scheduler.runJob(a.id)).toMatchObject({ action: "executed" });
+        expect(scheduler.chainSteps).toEqual([
+            { jobId: b.id, outcome: expect.objectContaining({ action: "executed" }) },
+        ]);
+        // A가 src를 dst로, 이어서 B가 dst를 second로 맞췄다
+        expect(await readFile(join(second, "only-src.txt"), "utf8")).toBe("new file");
+        expect((await runs.list(b.id))[0]).toMatchObject({ kind: "execute", trigger: "schedule" });
+
+        // A의 대상에 한도를 넘는 삭제를 만들면 A가 멈추고 B는 돌지 않는다
+        await jobs.save({ ...a, safety: { ...a.safety, autoMaxDelete: 0 } });
+        await f_Put(join(dst, "extra.txt"), "x");
+        const bRunsBefore = (await runs.list(b.id)).length;
+        expect(await scheduler.runJob(a.id)).toMatchObject({ action: "paused" });
+        expect(scheduler.chainSteps).toEqual([]);
+        expect((await runs.list(b.id)).length).toBe(bRunsBefore);
     });
 
     it("실행하면 대상이 원본과 같아지고, 다시 비교하면 같음만 남는다", async () => {

@@ -26,6 +26,12 @@ const api: itfRcloneGuiApi = {
         list: () => ipcRenderer.invoke(CHANNELS.jobsList),
         save: (job) => ipcRenderer.invoke(CHANNELS.jobsSave, job),
         delete: (jobId) => ipcRenderer.invoke(CHANNELS.jobsDelete, jobId),
+        resumeSchedule: (jobId) => ipcRenderer.invoke(CHANNELS.jobsResumeSchedule, jobId),
+        onChanged: (listener) => {
+            const h_Changed = (): void => listener();
+            ipcRenderer.on(CHANNELS.jobsChanged, h_Changed);
+            return () => ipcRenderer.removeListener(CHANNELS.jobsChanged, h_Changed);
+        },
     },
     rclone: {
         status: () => ipcRenderer.invoke(CHANNELS.rcloneStatus),
@@ -51,7 +57,9 @@ const api: itfRcloneGuiApi = {
         save: (settings) => ipcRenderer.invoke(CHANNELS.settingsSave, settings),
     },
     app: {
-        pickFolder: () => ipcRenderer.invoke(CHANNELS.appPickFolder),
+        pickFolder: (input) => ipcRenderer.invoke(CHANNELS.appPickFolder, input),
+        wslDistros: () => ipcRenderer.invoke(CHANNELS.appWslDistros),
+        info: () => ipcRenderer.invoke(CHANNELS.appInfo),
         pickFile: () => ipcRenderer.invoke(CHANNELS.appPickFile),
         copyText: (text) => ipcRenderer.invoke(CHANNELS.appCopyText, text),
         open: (ref) => ipcRenderer.invoke(CHANNELS.appOpen, ref),

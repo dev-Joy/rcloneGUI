@@ -56,9 +56,11 @@ export default function AppLayout(iProps: itfAppLayoutProps = propsDefault) {
     const jobs = useApp((s) => s.jobs);
     const selectedId = useApp((s) => s.selectedId);
     const rclone = useApp((s) => s.rclone);
+    const settings = useApp((s) => s.settings);
     const notice = useApp((s) => s.notice);
     const init = useApp((s) => s.init);
     const handleEvent = useApp((s) => s.handleEvent);
+    const reloadJobs = useApp((s) => s.reloadJobs);
     const clearNotice = useApp((s) => s.clearNotice);
 
     /** 편집 대화상자에 올린 작업. null이면 닫힌 상태 */
@@ -73,8 +75,14 @@ export default function AppLayout(iProps: itfAppLayoutProps = propsDefault) {
     // 처음 한 번 불러오고, main이 보내는 실행 이벤트를 구독한다.
     useEffect(() => {
         void init();
-        return window.rclonegui.run.onEvent((event) => void handleEvent(event));
-    }, [init, handleEvent]);
+        const offRun = window.rclonegui.run.onEvent((event) => void handleEvent(event));
+        // 자동 실행이 멈추는 등 main이 작업을 바꾸면 목록을 다시 읽는다 (F10).
+        const offJobs = window.rclonegui.jobs.onChanged(() => void reloadJobs());
+        return () => {
+            offRun();
+            offJobs();
+        };
+    }, [init, handleEvent, reloadJobs]);
 
     // 정보 안내는 잠시 뒤 스스로 사라지고, 오류는 닫을 때까지 남긴다.
     useEffect(() => {
@@ -102,7 +110,7 @@ export default function AppLayout(iProps: itfAppLayoutProps = propsDefault) {
 
     /** 새 작업 편집을 시작한다 */
     function h_NewJob() {
-        setEditing(newJob());
+        setEditing(newJob(settings));
     }
 
     return (

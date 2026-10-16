@@ -11,6 +11,27 @@
         flex-direction: column;
         gap: 12px;
 
+        /* 입력 칸 옆에 한 줄로 둔다. 좁아지면 입력 칸이 줄고 단추는 줄바꿈하지 않는다 */
+        .select {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid var(--zbc-border);
+            border-radius: 6px;
+            background: var(--zbc-surface);
+            color: var(--zbc-text);
+            font: inherit;
+        }
+
+        .pickers {
+            flex: none;
+            display: flex;
+            gap: 4px;
+        }
+
+        .pickers :global(.zbcButton) {
+            white-space: nowrap;
+        }
+
         .remotes {
             display: flex;
             flex-wrap: wrap;
@@ -45,6 +66,11 @@
             font-weight: 600;
             color: var(--zbc-muted);
             padding: 0 4px;
+        }
+
+        .note {
+            font-size: 12px;
+            color: var(--zbc-muted);
         }
 
         .warning {

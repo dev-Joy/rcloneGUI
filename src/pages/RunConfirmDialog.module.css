@@ -33,6 +33,38 @@
             word-break: break-all;
         }
 
+        .warn {
+            margin: 0;
+            color: var(--zbc-change);
+            font-weight: 600;
+        }
+
+        .newerList {
+            max-height: 120px;
+            overflow-y: auto;
+            border: 1px solid var(--zbc-change);
+            border-radius: 6px;
+            padding: 6px 10px;
+            background: var(--zbc-change-bg);
+            font-family: var(--zbc-font-mono);
+            font-size: 12px;
+        }
+
+        .dirLead {
+            margin: 0;
+        }
+
+        .dirList {
+            max-height: 120px;
+            overflow-y: auto;
+            border: 1px solid var(--zbc-border);
+            border-radius: 6px;
+            padding: 6px 10px;
+            background: var(--zbc-surface-2);
+            font-family: var(--zbc-font-mono);
+            font-size: 12px;
+        }
+
         .list {
             max-height: 180px;
             overflow-y: auto;

@@ -10,8 +10,8 @@
 /**
  *  Internal imports
  */
-import { countsLine, formatBytes, formatSeconds, RUN_STATUS_NAMES } from "@/lib/format";
-import { plannedDeletes, type itfProgress, type itfRunMeta } from "@/shared/types";
+import { countsLine, describeDirs, formatBytes, formatSeconds, RUN_STATUS_NAMES } from "@/lib/format";
+import { DETAILS_READING_MESSAGE, plannedDeletes, type itfProgress, type itfRunMeta } from "@/shared/types";
 import styles from "./JobRunBanner.module.css";
 
 /**
@@ -37,6 +37,7 @@ const propsDefault = {
 /** 실행 중 제목 */
 function f_ActiveTitle(run: itfRunMeta) {
     if (run.status === "queued") return "대기 중";
+    if (run.message === DETAILS_READING_MESSAGE) return "비교하는 중 — 크기 · 수정 시각 읽는 중";
     return run.kind === "preview" ? "비교하는 중" : "동기화하는 중";
 }
 
@@ -121,7 +122,9 @@ export default function JobRunBanner(iProps: itfJobRunBannerProps) {
         if (run.status === "success") {
             return (
                 <div className={`${styles.JobRunBanner} ${styles.success}`}>
-                    <b>동기화를 마쳤습니다.</b> {countsLine(run.counts, run.mode) || "바뀐 것 없음"}
+                    <b>동기화를 마쳤습니다.</b>{" "}
+                    {[countsLine(run.counts, run.mode), describeDirs(run)].filter(Boolean).join(" · ") ||
+                        "바뀐 것 없음"}
                     {plannedDeletes(run) > 0 && run.backupDir ? " · 지운 파일은 백업 폴더에 있습니다" : ""}
                 </div>
             );
@@ -132,9 +135,9 @@ export default function JobRunBanner(iProps: itfJobRunBannerProps) {
             >
                 <b>
                     {run.kind === "preview" ? "비교" : "동기화"} {RUN_STATUS_NAMES[run.status]}
-                    {run.exitCode !== null ? ` (종료 코드 ${run.exitCode})` : ""}
+                    {run.exitCode !== null && run.status !== "canceled" ? ` (종료 코드 ${run.exitCode})` : ""}
                 </b>{" "}
-                {run.message}
+                {run.status === "canceled" && run.message === "취소" ? "" : run.message}
                 {run.kind === "execute" &&
                     run.status === "canceled" &&
                     " — 그때까지 바뀐 파일은 아래 목록과 백업 폴더에서 확인하세요."}

@@ -1,0 +1,55 @@
+/**
+ *  Format test
+ *
+ *  @author dev-Joy    2026-10-16
+ *  @description
+ *      - 폴더 작업 문구 테스트 (F25). 확인하지 못한 폴더 지우기를 "지웠다"고 쓰지 않는다
+ */
+
+/**
+ *  External imports
+ */
+import { describe, expect, it } from "vitest";
+
+/**
+ *  Internal imports
+ */
+import { describeChanges, describeDirs, dirActionLabel, hasChanges } from "@/lib/format";
+import { emptyCounts, type itfDirCounts } from "@/shared/types";
+
+const f_Dirs = (patch: Partial<itfDirCounts>): itfDirCounts => ({
+    make: 0,
+    remove: 0,
+    kept: 0,
+    verified: false,
+    ...patch,
+});
+
+describe("폴더 작업 문구 (F25)", () => {
+    it("미리보기 · 확인 못 한 실행은 대상에만 있는 폴더를 '비어 있으면 지움'으로 쓴다", () => {
+        expect(describeDirs({ dirs: f_Dirs({ make: 2, remove: 1 }) })).toBe(
+            "폴더 2개 만듦, 대상에만 있는 폴더 1개(비어 있으면 지움)",
+        );
+        expect(dirActionLabel("delete", { kind: "preview", dirs: f_Dirs({ remove: 1 }) })).toBe(
+            "대상에만 있음 · 비어 있으면 지움",
+        );
+        expect(dirActionLabel("delete", { kind: "execute", dirs: f_Dirs({ remove: 1 }) })).toBe(
+            "지우기 시도 (비어 있을 때만)",
+        );
+    });
+
+    it("확인한 실행은 지운 것과 남은 것을 나눠 쓴다", () => {
+        const dirs = f_Dirs({ remove: 1, kept: 2, verified: true });
+        expect(describeDirs({ dirs })).toBe("빈 폴더 1개 지움, 폴더 2개 남김(파일이 있음)");
+        expect(dirActionLabel("delete", { kind: "execute", dirs })).toBe("빈 폴더 지움");
+        expect(dirActionLabel("same", { kind: "execute", dirs })).toBe("남김 (파일이 있음)");
+    });
+
+    it("폴더 작업만 있어도 바뀔 것이 있고, 예전 기록(dirs 없음)은 파일만 본다", () => {
+        const run = { mode: "sync" as const, counts: emptyCounts() };
+        expect(hasChanges({ ...run, dirs: f_Dirs({ make: 1 }) })).toBe(true);
+        expect(hasChanges({ ...run, dirs: null })).toBe(false);
+        expect(describeChanges({ ...run, dirs: f_Dirs({ make: 3 }) })).toBe("대상에 폴더 3개 만듦");
+        expect(describeDirs({ dirs: null })).toBe("");
+    });
+});

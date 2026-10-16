@@ -18,6 +18,7 @@ import { join } from "node:path";
  *  Internal imports
  */
 import {
+    DETAILS_READING_MESSAGE,
     emptyCounts,
     plannedDeletes,
     PREVIEW_TTL_MS,
@@ -26,12 +27,28 @@ import {
     type typRunEvent,
     type typRunKind,
     type itfRunMeta,
+    type typDetailsState,
+    type itfDirCounts,
+    type typRunTrigger,
 } from "@/shared/types";
-import { countItems } from "@/main/parsers/combined";
-import { createLineSplitter, formatErrorLine, parseLogLine } from "@/main/parsers/json-log";
+import { countItems, formatDirOps } from "@/main/parsers/combined";
+import {
+    createLineSplitter,
+    dirOpOf,
+    formatErrorLine,
+    parseLogLine,
+    type itfDirOp,
+} from "@/main/parsers/json-log";
 import type { clsJobStore } from "@/main/store/job-store";
 import { formatRunId, type clsRunStore } from "@/main/store/run-store";
-import { assertSafeArgs, buildArgs, buildFilterText, formatCommand, jobHash } from "./command-builder";
+import {
+    assertSafeArgs,
+    buildArgs,
+    buildFilterText,
+    buildListArgs,
+    formatCommand,
+    jobHash,
+} from "./command-builder";
 import { backupDirFor, destKey, isRemote } from "./paths";
 
 /**
@@ -57,6 +74,14 @@ export interface itfRunnerDeps {
 interface itfActiveRun {
     meta: itfRunMeta;
     child: ChildProcess | null;
+    /** 미리보기 뒤 양쪽 목록을 읽는 lsjson (F11). 취소할 때 함께 끝낸다 */
+    listChildren: ChildProcess[];
+    /** 미리보기 뒤 읽을 목록의 인자. 읽지 않으면 null */
+    listArgs: { source: string[]; dest: string[] } | null;
+    /** 대상이 로컬일 때 그 경로. 대상 폴더가 아직 없는지 판단에 쓴다 */
+    localDest: string | null;
+    /** 동기화 범위 (F25). 폴더 구조만이면 빈 원본 검사를 하지 않는다 */
+    scope: typJob["options"]["scope"];
     canceled: boolean;
     finished: Promise<itfRunMeta>;
 }
@@ -71,6 +96,43 @@ async function f_AssertSourceDirectory(path: string): Promise<void> {
         // 아래에서 같은 안내로 처리한다.
     }
     throw new clsRunError("SOURCE_MISSING", `원본 폴더를 찾을 수 없습니다: ${path}`);
+}
+
+async function f_IsMissingDirectory(path: string): Promise<boolean> {
+    try {
+        await stat(path);
+        return false;
+    } catch (error) {
+        return (error as NodeJS.ErrnoException).code === "ENOENT";
+    }
+}
+
+/** lsjson 하나를 띄워 stdout을 파일로 받는다. 종료 코드를 돌려준다 (시작하지 못하면 null). */
+function f_RunList(run: itfActiveRun, exe: string, args: string[], outFile: string): Promise<number | null> {
+    const out = createWriteStream(outFile);
+    const child = spawn(exe, args, { shell: false, windowsHide: true });
+    run.listChildren.push(child);
+    child.stdout.pipe(out);
+    child.stderr.resume();
+    // 파일이 다 써진 것과 프로세스가 끝난 것을 모두 기다린다. 둘의 순서는 정해져 있지 않다.
+    // 파일을 쓰지 못하면(실행 폴더가 사라짐 등) rclone을 끝내고 실패로 본다.
+    const written = new Promise<boolean>((resolve) => {
+        out.on("error", () => {
+            child.kill();
+            resolve(false);
+        });
+        out.on("close", () => resolve(true));
+    });
+    const exited = new Promise<number | null>((resolve) => {
+        child.on("error", () => {
+            out.end();
+            resolve(null);
+        });
+        child.on("close", (exitCode) => resolve(exitCode));
+    });
+    // 시작하기 전에 취소가 들어온 경우
+    if (run.canceled) child.kill();
+    return Promise.all([exited, written]).then(([code, ok]) => (ok ? code : null));
 }
 
 /**
@@ -133,13 +195,18 @@ export class clsRcloneRunner {
     }
 
     /** 미리보기를 시작하고 실행 ID를 바로 돌려준다. */
-    async preview(jobId: string): Promise<string> {
+    async preview(jobId: string, trigger: typRunTrigger = "manual"): Promise<string> {
         const job = await this.deps.jobs.get(jobId);
-        return this.start(job, "preview", null, undefined);
+        return this.start(job, "preview", null, undefined, trigger);
     }
 
     /** 미리보기를 확인한 만큼만 실제로 동기화한다. */
-    async execute(input: { jobId: string; previewRunId: string; confirmedDeletes: number }): Promise<string> {
+    async execute(input: {
+        jobId: string;
+        previewRunId: string;
+        confirmedDeletes: number;
+        trigger?: typRunTrigger;
+    }): Promise<string> {
         const job = await this.deps.jobs.get(input.jobId);
         const preview = await this.deps.runs.read(input.jobId, input.previewRunId);
         if (!preview || preview.kind !== "preview" || preview.status !== "success" || !preview.endedAt) {
@@ -148,9 +215,9 @@ export class clsRcloneRunner {
         if (this.now().getTime() - new Date(preview.endedAt).getTime() > PREVIEW_TTL_MS) {
             throw new clsRunError("PREVIEW_EXPIRED", "미리보기가 30분을 넘었습니다. 다시 비교하세요");
         }
-        const latest = (await this.deps.runs.list(input.jobId))[0];
+        const latestRunId = await this.deps.runs.latestRunId(input.jobId);
         const hash = jobHash(job, await this.deps.defaultConfig());
-        if (preview.jobHash !== hash || latest?.runId !== preview.runId) {
+        if (preview.jobHash !== hash || latestRunId !== preview.runId) {
             throw new clsRunError(
                 "PREVIEW_STALE",
                 "미리보기 뒤에 작업 설정이나 실행 기록이 바뀌었습니다. 다시 비교하세요",
@@ -163,7 +230,13 @@ export class clsRcloneRunner {
         if (input.confirmedDeletes !== deletes) {
             throw new clsRunError("CONFIRM_MISMATCH", `확인한 삭제 수가 미리보기(${deletes}개)와 다릅니다`);
         }
-        return this.start(job, "execute", preview.runId, deletes);
+        return this.start(job, "execute", preview.runId, deletes, input.trigger ?? "manual");
+    }
+
+    /** 그 작업의 실행이 대기 중이거나 도는 중인지 (F10 스케줄러가 겹쳐 돌리지 않게) */
+    isActive(jobId: string): boolean {
+        for (const run of this.active.values()) if (run.meta.jobId === jobId) return true;
+        return false;
     }
 
     /** 대기 중이거나 실행 중인 rclone을 멈춘다. 이미 끝났으면 아무 일도 없다. */
@@ -172,6 +245,7 @@ export class clsRcloneRunner {
         if (!run) return;
         run.canceled = true;
         run.child?.kill();
+        for (const child of run.listChildren) child.kill();
     }
 
     /** 실행이 끝나 기록이 저장될 때까지 기다린다 (테스트·체인용). */
@@ -185,7 +259,7 @@ export class clsRcloneRunner {
         const dir = join(this.deps.manualDir, jobId);
         await mkdir(dir, { recursive: true });
         const filterPath = join(dir, "filter.txt");
-        await writeFile(filterPath, buildFilterText(job.excludes), "utf8");
+        await writeFile(filterPath, buildFilterText(job.excludes, job.options.scope), "utf8");
 
         const defaultConfig = await this.deps.defaultConfig();
         const base = { filterPath, combinedPath: join(dir, "combined.txt"), defaultConfig };
@@ -213,6 +287,7 @@ export class clsRcloneRunner {
         kind: typRunKind,
         previewRunId: string | null,
         maxDelete: number | undefined,
+        trigger: typRunTrigger,
     ): Promise<string> {
         const exe = await this.deps.resolveRclone();
         if (!isRemote(job.source)) await f_AssertSourceDirectory(job.source);
@@ -233,7 +308,14 @@ export class clsRcloneRunner {
             maxDelete,
             backupDir,
         });
-        await writeFile(filterPath, buildFilterText(job.excludes), "utf8");
+        await writeFile(filterPath, buildFilterText(job.excludes, job.options.scope), "utf8");
+        const listArgs =
+            kind === "preview" && job.options.readDetails
+                ? {
+                      source: buildListArgs(job, "source", { filterPath, defaultConfig }),
+                      dest: buildListArgs(job, "dest", { filterPath, defaultConfig }),
+                  }
+                : null;
 
         const meta: itfRunMeta = {
             runId,
@@ -252,10 +334,22 @@ export class clsRcloneRunner {
             blocked: null,
             message: "대기 중",
             errors: [],
+            details: null,
+            dirs: null,
+            trigger,
         };
         await this.deps.runs.write(meta);
 
-        const run: itfActiveRun = { meta, child: null, canceled: false, finished: Promise.resolve(meta) };
+        const run: itfActiveRun = {
+            meta,
+            child: null,
+            listChildren: [],
+            listArgs,
+            localDest: isRemote(job.dest) ? null : job.dest,
+            scope: job.options.scope,
+            canceled: false,
+            finished: Promise.resolve(meta),
+        };
         // 같은 대상에는 한 번에 하나만 실행한다.
         const key = destKey(job.dest);
         const previous = this.queues.get(key) ?? Promise.resolve();
@@ -288,6 +382,8 @@ export class clsRcloneRunner {
     ): Promise<itfRunMeta> {
         const { runId, jobId } = run.meta;
         const errors: string[] = [];
+        /** 폴더 작업 (F25). 같은 폴더가 두 번 나와도 한 번만 */
+        const dirOps = new Map<string, itfDirOp>();
         let exitCode: number | null = null;
 
         if (!run.canceled) {
@@ -306,6 +402,8 @@ export class clsRcloneRunner {
                 if (parsed.level === "error" && errors.length < MAX_KEPT_ERRORS) {
                     errors.push(formatErrorLine(parsed));
                 }
+                const dirOp = dirOpOf(parsed);
+                if (dirOp) dirOps.set(`${dirOp.op}:${dirOp.path}`, dirOp);
             });
 
             exitCode = await new Promise<number | null>((resolve) => {
@@ -325,11 +423,16 @@ export class clsRcloneRunner {
             splitter.flush();
             await new Promise<void>((resolve) => log.end(resolve));
         }
+        const { ops, dirs } = await this.settleDirOps(run, [...dirOps.values()]);
+        if (ops.length > 0) await writeFile(join(dir, "dirs.txt"), formatDirOps(ops), "utf8");
 
+        const details = await this.readDetails(run, exe, dir, exitCode);
         const counts = countItems(await this.deps.runs.readItems(jobId, runId));
         const status = run.canceled ? "canceled" : exitCode === 0 ? "success" : "failed";
         // 원본이 비어 있으면 sync가 대상을 통째로 지우므로 실행을 막는다.
+        // "폴더 구조만"(F25)은 파일을 걸러 내므로 combined가 늘 비어 있다. 파일을 지우지 않으니 이 검사를 하지 않는다.
         const emptySource =
+            run.scope !== "folders" &&
             run.meta.kind === "preview" &&
             status === "success" &&
             counts.add + counts.change + counts.same === 0;
@@ -342,15 +445,82 @@ export class clsRcloneRunner {
             endedAt: this.now().toISOString(),
             blocked: emptySource ? "EMPTY_SOURCE" : null,
             errors,
+            details,
+            dirs,
             message: run.canceled
                 ? "취소"
                 : emptySource
                   ? "원본에 파일이 없습니다. 경로를 확인하세요"
-                  : describeExit(exitCode, errors),
+                  : describeExit(exitCode, errors) +
+                    (details === "failed" ? " · 크기 · 수정 시각을 읽지 못했습니다" : ""),
         };
         run.meta = meta;
         await this.deps.runs.write(meta);
         this.deps.emit({ runId, jobId, type: "done", payload: meta });
         return meta;
+    }
+
+    /**
+     * 폴더 작업을 정리한다 (F25). rclone의 remove directory는 시도일 뿐이라 비어 있지 않은 폴더는 남는다 (rclone-notes P6).
+     * 로컬 대상의 실제 실행이면 폴더가 정말 사라졌는지 확인해 남은 것은 keep으로 바꾼다. 미리보기 · 리모트는 확인하지 않는다.
+     */
+    private async settleDirOps(
+        run: itfActiveRun,
+        ops: itfDirOp[],
+    ): Promise<{ ops: { op: "make" | "remove" | "keep"; path: string }[]; dirs: itfDirCounts }> {
+        const verify = run.meta.kind === "execute" && run.localDest !== null;
+        const settled: { op: "make" | "remove" | "keep"; path: string }[] = [];
+        for (const op of ops) {
+            if (op.op === "remove" && verify && run.localDest !== null) {
+                const gone = await f_IsMissingDirectory(join(run.localDest, op.path));
+                settled.push({ op: gone ? "remove" : "keep", path: op.path });
+            } else {
+                settled.push(op);
+            }
+        }
+        const f_Count = (kind: "make" | "remove" | "keep"): number =>
+            settled.filter((o) => o.op === kind).length;
+        return {
+            ops: settled,
+            dirs: {
+                make: f_Count("make"),
+                remove: f_Count("remove"),
+                kept: f_Count("keep"),
+                verified: verify,
+            },
+        };
+    }
+
+    /**
+     * 성공한 미리보기 뒤에 원본 · 대상 목록(lsjson)을 동시에 읽어 실행 폴더에 둔다 (F11).
+     * 실패해도 미리보기는 그대로 두고 상태만 남긴다. 동기화 판단은 combined가 한다.
+     */
+    private async readDetails(
+        run: itfActiveRun,
+        exe: string,
+        dir: string,
+        exitCode: number | null,
+    ): Promise<typDetailsState | null> {
+        if (run.meta.kind !== "preview") return null;
+        if (run.listArgs === null) return "off";
+        if (run.canceled || exitCode !== 0) return null;
+
+        const { runId, jobId } = run.meta;
+        run.meta = { ...run.meta, message: DETAILS_READING_MESSAGE };
+        this.deps.emit({ runId, jobId, type: "started", payload: run.meta });
+
+        const destFile = join(dir, "lsjson-dst.json");
+        const [sourceCode, destCode] = await Promise.all([
+            f_RunList(run, exe, run.listArgs.source, join(dir, "lsjson-src.json")),
+            f_RunList(run, exe, run.listArgs.dest, destFile),
+        ]);
+        if (run.canceled) return null;
+        let destOk = destCode === 0;
+        // 대상 폴더가 아직 없으면(첫 실행) rclone은 exit 3을 낸다. 빈 목록으로 본다.
+        if (destCode === 3 && run.localDest !== null && (await f_IsMissingDirectory(run.localDest))) {
+            await writeFile(destFile, "[]", "utf8");
+            destOk = true;
+        }
+        return sourceCode === 0 && destOk ? "read" : "failed";
     }
 }

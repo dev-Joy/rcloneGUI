@@ -66,6 +66,10 @@ interface itfAppState {
     cancel(jobId: string): Promise<void>;
     showRun(run: itfRunMeta): Promise<void>;
     saveSettings(settings: typSettings): Promise<boolean>;
+    /** main이 작업을 바꿨을 때 목록을 다시 읽는다 (F10 자동 실행 멈춤) */
+    reloadJobs(): Promise<void>;
+    /** 스스로 멈춘 자동 실행을 다시 켠다 (F10) */
+    resumeSchedule(jobId: string): Promise<void>;
     refreshRclone(): Promise<void>;
     handleEvent(event: typRunEvent): Promise<void>;
     notify(kind: typNotice["kind"], text: string): void;
@@ -125,7 +129,13 @@ export const useApp = create<itfAppState>((set, get) => {
         jobs: [],
         selectedId: null,
         rclone: null,
-        settings: { rclonePath: null, rcloneConfig: null },
+        settings: {
+            rclonePath: null,
+            rcloneConfig: null,
+            defaultSource: null,
+            defaultDest: null,
+            launchAtLogin: false,
+        },
         views: {},
         notice: null,
 
@@ -166,6 +176,23 @@ export const useApp = create<itfAppState>((set, get) => {
                 get().notify("error", messageOf(error));
                 return null;
             }
+        },
+
+        async reloadJobs() {
+            await f_Guard(async () => {
+                set({ jobs: await unwrap(window.rclonegui.jobs.list()) });
+                // 자동 실행이 남긴 기록도 보이게 고른 작업의 기록을 다시 읽는다.
+                const selected = get().selectedId;
+                if (selected) await get().select(selected);
+            });
+        },
+
+        async resumeSchedule(jobId) {
+            await f_Guard(async () => {
+                await unwrap(window.rclonegui.jobs.resumeSchedule(jobId));
+                set({ jobs: await unwrap(window.rclonegui.jobs.list()) });
+                get().notify("info", "자동 실행을 다시 켰습니다");
+            });
         },
 
         async deleteJob(jobId) {

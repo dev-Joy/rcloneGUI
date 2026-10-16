@@ -1,0 +1,98 @@
+/*
+ *  @author dev-Joy 2026-10-14
+ *  @description
+ *      - JobFileTree(비교 트리 표) 스타일
+ *      - pages 레이어에 배정되어 components 레이어의 공용 스타일을 특이도 무관하게 오버라이드
+ */
+@layer pages {
+    /* 최상단 클래스 - 컴포넌트명과 동일 */
+    .JobFileTree {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        margin: 0 16px;
+
+        .tools {
+            display: flex;
+            justify-content: flex-end;
+            gap: 4px;
+            padding-bottom: 4px;
+            font-size: 12px;
+        }
+
+        :global(.zbcTreeTableRow) {
+            font-size: 12px;
+        }
+
+        :global(.zbcTreeTableRow .zbcBadge) {
+            padding: 1px 4px;
+        }
+
+        .folder {
+            font-weight: 600;
+        }
+
+        .file {
+            font-family: var(--zbc-font-mono);
+        }
+
+        .missing {
+            color: var(--zbc-muted);
+            opacity: 0.6;
+            font-style: italic;
+        }
+
+        .summary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            max-width: 100%;
+            color: var(--zbc-muted);
+        }
+
+        /* 상태가 많아 길어지면 요약만 줄이고 "대상이 더 최신"은 남긴다. 전체 문장은 title */
+        .summaryText {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .action {
+            max-width: 100%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        /* 그래도 모자라면 배지 글자만 줄이고 "대상이 더 최신" 경고는 남긴다. 전체 문장은 칸의 title */
+        .action :global(.zbcBadge) {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .newer {
+            flex: none;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--zbc-change);
+            background: var(--zbc-change-bg);
+            white-space: nowrap;
+        }
+
+        .same {
+            color: var(--zbc-same);
+        }
+
+        .error .file {
+            color: var(--zbc-delete);
+            font-weight: 700;
+        }
+    }
+}

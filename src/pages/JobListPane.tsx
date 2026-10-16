@@ -103,6 +103,14 @@ export default function JobListPane(iProps: itfJobListPaneProps) {
                                         {job.mode}
                                     </ZBCBadge>
                                     {f_SubText(job)}
+                                    {(job.schedule.enabled || job.schedule.paused) && (
+                                        <span
+                                            className={job.schedule.paused ? styles.autoPaused : styles.auto}
+                                            title={job.schedule.paused?.reason ?? "자동 실행 켜짐"}
+                                        >
+                                            {job.schedule.paused ? "자동 멈춤" : "자동"}
+                                        </span>
+                                    )}
                                 </span>
                             </span>
                         </button>

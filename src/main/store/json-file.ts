@@ -3,14 +3,13 @@
  *
  *  @author dev-Joy    2026-10-11
  *  @description
- *      - JSON 파일 읽기와 원자적 쓰기
+ *      - JSON 파일 읽기 (예전 JSON 저장소를 DB로 가져올 때 쓴다)
  */
 
 /**
  *  External imports
  */
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { readFile } from "node:fs/promises";
 
 /**
  *  메인 클래스 / export 함수
@@ -25,12 +24,4 @@ export async function readJson(file: string): Promise<unknown> {
         throw error;
     }
     return JSON.parse(text) as unknown;
-}
-
-/** 임시 파일에 쓴 뒤 이름을 바꿔, 쓰는 도중 꺼져도 기존 파일이 깨지지 않게 한다. */
-export async function writeJson(file: string, value: unknown): Promise<void> {
-    await mkdir(dirname(file), { recursive: true });
-    const temp = `${file}.tmp`;
-    await writeFile(temp, `${JSON.stringify(value, null, 2)}\n`, "utf8");
-    await rename(temp, file);
 }
