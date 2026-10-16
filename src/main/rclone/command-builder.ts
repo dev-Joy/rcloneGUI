@@ -114,13 +114,15 @@ export function buildArgs(job: typJob, ctx: itfBuildContext): string[] {
 /**
  * 미리보기 뒤 한쪽 목록을 읽는 lsjson 인자 (F11). 읽기 전용이다.
  * 동기화와 같은 필터 파일 · config · fast-list 조건을 써서 같은 파일 집합을 본다.
+ * filterPath가 null이면 필터 없이 모든 파일을 읽는다 (F22 제외된 파일 계산).
  */
 export function buildListArgs(
     job: typJob,
     side: "source" | "dest",
-    ctx: Pick<itfBuildContext, "filterPath" | "defaultConfig">,
+    ctx: Pick<itfBuildContext, "defaultConfig"> & { filterPath: string | null },
 ): string[] {
-    const args: string[] = ["lsjson", job[side], "-R", "--files-only", "--filter-from", ctx.filterPath];
+    const args: string[] = ["lsjson", job[side], "-R", "--files-only"];
+    if (ctx.filterPath !== null) args.push("--filter-from", ctx.filterPath);
 
     const config = job.rcloneConfig ?? ctx.defaultConfig;
     if (config) args.push("--config", config);

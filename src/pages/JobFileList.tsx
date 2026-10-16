@@ -17,7 +17,7 @@ import { useRef } from "react";
  *  Internal imports
  */
 import ZBCBadge from "@/components/ZBCBadge";
-import { actionLabel, dirActionLabel, formatBytes, formatDateTime } from "@/lib/format";
+import { formatBytes, formatDateTime, itemActionLabel } from "@/lib/format";
 import { isDestNewer, type itfFileItem, type itfFileSide, type itfRunMeta } from "@/shared/types";
 import styles from "./JobFileList.module.css";
 
@@ -86,13 +86,14 @@ export default function JobFileList(iProps: itfJobFileListProps) {
 
     /** 원본 쪽 칸. 원본에 없는 파일은 비운다. 폴더 항목은 끝에 / */
     function f_SourceCell(item: itfFileItem) {
-        if (item.status === "delete") return <span className={styles.missing}>없음</span>;
+        if (item.status === "delete" || item.source === null)
+            return <span className={styles.missing}>없음</span>;
         return item.isDir ? `${item.path}/` : item.path;
     }
 
     /** 대상 쪽 칸. 대상에 아직 없는 파일은 비운다 */
     function f_DestCell(item: itfFileItem) {
-        return item.status !== "add" || _V.executed ? (
+        return item.dest !== null && (item.status !== "add" || _V.executed) ? (
             item.isDir ? (
                 `${item.path}/`
             ) : (
@@ -144,9 +145,7 @@ export default function JobFileList(iProps: itfJobFileListProps) {
                                     {f_Side(item, f_SourceCell(item), item.source)}
                                     <span className={styles.action}>
                                         <ZBCBadge tone={item.status}>
-                                            {item.isDir
-                                                ? dirActionLabel(item.status, run)
-                                                : actionLabel(item.status, run, backup)}
+                                            {itemActionLabel(item, run, backup)}
                                         </ZBCBadge>
                                         {newer && (
                                             <span

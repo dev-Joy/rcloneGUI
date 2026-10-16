@@ -11,6 +11,7 @@
  */
 import {
     plannedDeletes,
+    type itfFileItem,
     type itfRunMeta,
     type itfSpace,
     type typCounts,
@@ -132,6 +133,17 @@ export function describeChanges(run: Pick<itfRunMeta, "mode" | "counts" | "dirs"
     const dirs = describeDirs(run);
     if (dirs) parts.push(dirs);
     return parts.length > 0 ? `대상에 ${parts.join(", ")}` : "바뀔 것 없음";
+}
+
+/** 목록 가운데 열 문구. 폴더 작업(F25)과 기타 보기의 표시(F22)까지 다룬다 */
+export function itemActionLabel(
+    item: Pick<itfFileItem, "status" | "isDir" | "note">,
+    run: Pick<itfRunMeta, "kind" | "mode" | "backupDir" | "dirs">,
+    backup: boolean,
+): string {
+    if (item.note === "excluded") return "제외됨 · 건드리지 않음";
+    const label = item.isDir ? dirActionLabel(item.status, run) : actionLabel(item.status, run, backup);
+    return item.note === "pending" ? `${label} · 처리 안 됨` : label;
 }
 
 /** 폴더 항목의 일어날 일 (F25). 확인하지 못한 지우기는 "비어 있으면"을 붙인다 */

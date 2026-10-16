@@ -11,7 +11,7 @@
  */
 import { spawn, type ChildProcess } from "node:child_process";
 import { createWriteStream } from "node:fs";
-import { mkdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 /**
@@ -32,8 +32,11 @@ import {
     type typRunTrigger,
     type itfRunSpace,
     type itfSpace,
+    type itfExcludedItem,
 } from "@/shared/types";
 import { parseAbout } from "@/main/parsers/about";
+import { parseLsjson } from "@/main/parsers/lsjson";
+import { excludedListSchema } from "@/shared/schemas";
 import { countItems, formatDirOps } from "@/main/parsers/combined";
 import {
     createLineSplitter,
@@ -53,6 +56,7 @@ import {
     formatCommand,
     jobHash,
 } from "./command-builder";
+import { diffExcluded } from "./excluded";
 import { aboutRoot, backupDirFor, destKey, isRemote } from "./paths";
 
 /**
@@ -117,7 +121,12 @@ async function f_IsMissingDirectory(path: string): Promise<boolean> {
 }
 
 /** lsjson 하나를 띄워 stdout을 파일로 받는다. 종료 코드를 돌려준다 (시작하지 못하면 null). */
-function f_RunList(run: itfActiveRun, exe: string, args: string[], outFile: string): Promise<number | null> {
+function f_RunList(
+    run: Pick<itfActiveRun, "listChildren" | "canceled">,
+    exe: string,
+    args: string[],
+    outFile: string,
+): Promise<number | null> {
     // 띄우기 직전에 차단 목록을 한 번 더 본다 (만들 때도 검사했다). 걸리면 읽기 실패로 본다 — 미리보기는 그대로 둔다.
     try {
         assertSafeArgs(args);
@@ -224,6 +233,8 @@ export function describeExit(code: number | null, errors: readonly string[]): st
 export class clsRcloneRunner {
     private readonly active = new Map<string, itfActiveRun>();
     private readonly queues = new Map<string, Promise<unknown>>();
+    /** 계산 중인 제외 목록 (F22). 같은 실행을 동시에 요청하면 한 번만 읽는다 */
+    private readonly excludedReads = new Map<string, Promise<itfExcludedItem[]>>();
     private readonly now: () => Date;
     private readonly backupDirFor: NonNullable<itfRunnerDeps["backupDirFor"]>;
 
@@ -284,6 +295,87 @@ export class clsRcloneRunner {
         run.canceled = true;
         run.child?.kill();
         for (const child of run.listChildren) child.kill();
+    }
+
+    /**
+     * 성공한 미리보기에서 필터에 걸려 빠진 파일 (F22). 필터 없는 lsjson을 원본 · 대상에 띄워 미리보기 목록과 비교한다.
+     * 읽기 전용이다. 결과는 실행 폴더의 excluded.json에 남겨 다음에는 읽기만 한다.
+     */
+    async readExcluded(jobId: string, runId: string): Promise<itfExcludedItem[]> {
+        const key = `${jobId}/${runId}`;
+        const reading = this.excludedReads.get(key);
+        if (reading) return reading;
+        const work = this.computeExcluded(jobId, runId).finally(() => this.excludedReads.delete(key));
+        this.excludedReads.set(key, work);
+        return work;
+    }
+
+    private async computeExcluded(jobId: string, runId: string): Promise<itfExcludedItem[]> {
+        const meta = await this.deps.runs.read(jobId, runId);
+        if (!meta || meta.kind !== "preview" || meta.status !== "success") {
+            throw new clsRunError(
+                "EXCLUDED_UNAVAILABLE",
+                "성공한 미리보기에서만 제외된 파일을 볼 수 있습니다",
+            );
+        }
+        const dir = this.deps.runs.runDir(jobId, runId);
+        const cachePath = join(dir, "excluded.json");
+        try {
+            return excludedListSchema.parse(JSON.parse(await readFile(cachePath, "utf8")) as unknown);
+        } catch (error) {
+            // 없으면 새로 계산한다. 깨진 파일도 다시 계산해 덮어쓴다.
+            if ((error as NodeJS.ErrnoException).code !== "ENOENT") await rm(cachePath, { force: true });
+        }
+
+        const job = await this.deps.jobs.get(jobId);
+        const defaultConfig = await this.deps.defaultConfig();
+        if (jobHash(job, defaultConfig) !== meta.jobHash) {
+            throw new clsRunError("RUN_STALE", "작업 설정이 바뀌었습니다. 다시 비교하세요");
+        }
+        const exe = await this.deps.resolveRclone();
+        const lists = { listChildren: [] as ChildProcess[], canceled: false };
+        const sourceFile = join(dir, "lsjson-src-all.json");
+        const destFile = join(dir, "lsjson-dst-all.json");
+        try {
+            const [sourceCode, destCode] = await Promise.all([
+                f_RunList(
+                    lists,
+                    exe,
+                    buildListArgs(job, "source", { filterPath: null, defaultConfig }),
+                    sourceFile,
+                ),
+                f_RunList(
+                    lists,
+                    exe,
+                    buildListArgs(job, "dest", { filterPath: null, defaultConfig }),
+                    destFile,
+                ),
+            ]);
+            if (sourceCode !== 0) {
+                throw new clsRunError(
+                    "EXCLUDED_FAILED",
+                    `원본 목록을 읽지 못했습니다 (rclone 종료 코드 ${sourceCode ?? "없음"})`,
+                );
+            }
+            // 대상 폴더가 아직 없으면(첫 실행) 빈 목록으로 본다 (F11과 같다)
+            const destMissing =
+                destCode === 3 && !isRemote(job.dest) && (await f_IsMissingDirectory(job.dest));
+            if (destCode !== 0 && !destMissing) {
+                throw new clsRunError(
+                    "EXCLUDED_FAILED",
+                    `대상 목록을 읽지 못했습니다 (rclone 종료 코드 ${destCode ?? "없음"})`,
+                );
+            }
+            const result = diffExcluded(
+                parseLsjson(await readFile(sourceFile, "utf8")),
+                destMissing ? new Map() : parseLsjson(await readFile(destFile, "utf8")),
+                await this.deps.runs.readItems(jobId, runId),
+            );
+            await writeFile(cachePath, JSON.stringify(result), "utf8");
+            return result;
+        } finally {
+            await Promise.all([rm(sourceFile, { force: true }), rm(destFile, { force: true })]);
+        }
     }
 
     /** 실행이 끝나 기록이 저장될 때까지 기다린다 (테스트·체인용). */

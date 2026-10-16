@@ -10,6 +10,7 @@
  *  Internal imports
  */
 import type {
+    itfExcludedItem,
     itfFileItem,
     typJob,
     itfJobCommands,
@@ -71,6 +72,8 @@ export interface itfRcloneGuiApi {
     runs: {
         list(jobId: string): Promise<typResult<itfRunMeta[]>>;
         items(ref: itfRunRef): Promise<typResult<itfFileItem[]>>;
+        /** 성공한 미리보기에서 필터에 걸려 빠진 파일 (F22). 요청할 때만 계산하고 실행 폴더에 남긴다 */
+        excluded(ref: itfRunRef): Promise<typResult<itfExcludedItem[]>>;
     };
     settings: {
         get(): Promise<typResult<typSettings>>;
@@ -109,6 +112,7 @@ export const CHANNELS = {
     runCommand: "run:command",
     runsList: "runs:list",
     runsItems: "runs:items",
+    runsExcluded: "runs:excluded",
     settingsGet: "settings:get",
     settingsSave: "settings:save",
     appPickFolder: "app:pick-folder",

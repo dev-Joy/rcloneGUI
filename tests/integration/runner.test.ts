@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 /**
  *  Internal imports
  */
+import { pendingAfter } from "@/lib/list-views";
 import { findRclone } from "@/main/rclone/locate";
 import { clsRcloneRunner } from "@/main/rclone/runner";
 import { clsScheduler } from "@/main/schedule/scheduler";
@@ -174,6 +175,47 @@ describe.skipIf(rclone === null)("RcloneRunner + 실제 rclone", () => {
 
         expect(events.filter((e) => e.runId === meta.runId).at(-1)?.type).toBe("done");
         expect((await runs.list(job.id))[0]).toEqual(meta);
+    });
+
+    it("제외된 파일: 필터에 걸린 양쪽 파일만, 결과를 남기고, 설정이 바뀌면 · 실행 기록이면 거부 (F22)", async () => {
+        const job = await f_SaveJob();
+        const preview = await f_Preview(job.id);
+        const excluded = await runner.readExcluded(job.id, preview.runId);
+        expect(excluded.map((i) => [i.path, i.source !== null, i.dest !== null])).toEqual([
+            ["node_modules/pkg/index.js", true, false],
+            ["node_modules/pkg/old.js", false, true],
+        ]);
+        const dir = runs.runDir(job.id, preview.runId);
+        expect(JSON.parse(await readFile(join(dir, "excluded.json"), "utf8"))).toEqual(excluded);
+        expect(await readdir(dir)).not.toContain("lsjson-src-all.json");
+        // 결과가 남았으니 설정이 바뀐 뒤에도 그 미리보기의 결과는 그대로 읽는다
+        await jobs.save({ ...job, excludes: [] });
+        expect(await runner.readExcluded(job.id, preview.runId)).toEqual(excluded);
+
+        const again = await f_Preview(job.id);
+        await jobs.save({ ...job, excludes: ["*.txt"] });
+        await expect(runner.readExcluded(job.id, again.runId)).rejects.toMatchObject({ code: "RUN_STALE" });
+
+        await jobs.save(job);
+        const fresh = await f_Preview(job.id);
+        const done = await f_Execute(job.id, fresh.runId, 1);
+        await expect(runner.readExcluded(job.id, done.runId)).rejects.toMatchObject({
+            code: "EXCLUDED_UNAVAILABLE",
+        });
+    });
+
+    it("실제 동기화가 성공하면 미리보기의 할 일이 모두 실행 목록에 같은 상태로 남는다 (F22 아직 실행되지 않음)", async () => {
+        const job = await f_SaveJob();
+        const preview = await f_Preview(job.id);
+        const done = await f_Execute(job.id, preview.runId, 1);
+        const planned = await runs.readItems(job.id, preview.runId);
+        const executed = await runs.readItems(job.id, done.runId);
+        expect(pendingAfter(planned, executed, "sync")).toEqual([]);
+        expect(
+            pendingAfter(planned, [], "sync")
+                .map((i) => i.path)
+                .sort(),
+        ).toEqual(["changed.txt", "only-dst.txt", "only-src.txt"]);
     });
 
     it("미리보기 뒤 양쪽 크기 · 수정 시각을 붙인다 (F11)", async () => {

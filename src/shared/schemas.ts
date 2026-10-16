@@ -145,6 +145,13 @@ export const executeInputSchema = z.object({
 
 export const runRefSchema = z.object({ jobId: jobIdSchema, runId: runIdSchema });
 
+const fileSideSchema = z.object({ size: z.number(), modTime: z.string() });
+
+/** 실행 폴더에 남긴 제외 목록(excluded.json) (F22) */
+export const excludedListSchema = z.array(
+    z.object({ path: z.string().min(1), source: fileSideSchema.nullable(), dest: fileSideSchema.nullable() }),
+);
+
 export const openTargetSchema = runRefSchema.extend({ target: z.enum(["runDir", "backupDir"]) });
 
 const countSchema = z.number().int().min(0);

@@ -258,6 +258,18 @@
 - R2 수정: `runSettingsOf` · `sameRunSettings`(shared)로 jobHash와 화면 판단을 한 곳에, 명령 값이 바뀔 때만 무효. `.members`, "(N)", External imports 분리, 없는 그룹을 가리키는 작업은 그룹 없음에 표시
 - R2: reviewer · app-verifier 모두 APPROVED. 남은 것: job-store save의 그룹 확인과 쓰기 사이에 그룹 지우기가 끼는 경합(모달이라 화면에선 어려움, 생겨도 그룹 없음에 보임), 잘린 그룹 이름 툴팁 없음, 실제 창 크기 조절은 흉내로만 확인
 
+### [TASK_026] : (2026-10-16) [F22 비교 결과 "기타" 보기]
+
+- 명세: `docs/specs/2026-10-16-list-views.md`. rclone-notes 2026-10-16(실행 combined, 필터 없는 lsjson)
+- 칩 줄의 "기타" 선택: 포함됨(전체) · 제외됨 · 새로 생김 · 아직 실행되지 않음. 다른 실행을 열면 칩 보기로
+- 제외됨: `runs:excluded` → `readExcluded`(성공한 미리보기만, 설정 지문이 다르면 RUN_STALE, 필터 없는 lsjson 양쪽, `diffExcluded`, excluded.json에 남김, 동시 요청은 한 번)
+- 새로 생김: 미리보기보다 먼저 끝난 마지막 성공한 실제 동기화의 미리보기와 비교(`baselineExecute` · `newSince`). 아직 실행되지 않음: 실행의 미리보기 할 일 − 실행 combined(`pendingAfter`)
+- 화면: `itfFileItem.note`(excluded · pending), `itemActionLabel`, 트리 폴더 "제외 N"
+- 테스트: list-views.test.ts, 필터 없는 lsjson 인자, 통합 2(제외됨 · 거부, 성공한 실행은 처리 안 됨 0)
+- R1: reviewer REJECTED — 제외됨 실패를 알림으로 보이지 않음. app-verifier REJECTED — 최소 폭(886px)에서 기타 선택 상자 때문에 칩 · [트리|평면] 글자가 접힘
+- R2 수정: 실패 시 알림 + 목록 문구, 칩 줄 flex-wrap · 글자 nowrap, 아직 실행되지 않음은 실행이 끝난 뒤에만, 칩 aria-pressed는 칩 보기에서만, 명세에 캐시 순서 기록
+- R2: reviewer · app-verifier 모두 APPROVED. 남은 것: 실패한 보기에 머물면 오류 알림이 다시 뜰 수 있음, 제외됨 lsjson은 취소 · 시간 제한 없음, 실패 · 중지된 실행의 처리 안 됨 항목은 화면에서 못 봄, 720px은 흉내로만
+
 ## Error
 
 ### [ERR_001] : (2026-10-11) oxlint `no-restricted-imports`의 `group: ["../*"]`가 `../lib/format`을 못 잡음 → TASK_003

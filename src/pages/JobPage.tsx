@@ -29,11 +29,14 @@ import {
     messageOf,
 } from "@/lib/format";
 import { cloneJob } from "@/lib/job-defaults";
+import { baselineExecute, excludedItems, newSince, pendingAfter, viewProblem } from "@/lib/list-views";
 import { unwrap, usablePreview, useApp } from "@/stores/app-store";
 import {
     isDestTooSmall,
+    type itfFileItem,
     type itfRunMeta,
     type typItemStatus,
+    type typListView,
     type typJob,
     type typJobInput,
 } from "@/shared/types";
@@ -74,9 +77,52 @@ const DEFAULT_FILTER: Record<typItemStatus, boolean> = {
     same: false,
 };
 
+/** "기타" 보기 (F22). status는 상태 칩 필터 */
+const LIST_VIEWS: { value: typListView; label: string }[] = [
+    { value: "status", label: "기타: 상태 칩대로" },
+    { value: "included", label: "포함됨 (비교에 든 모든 항목)" },
+    { value: "excluded", label: "제외됨 (필터에 걸린 파일)" },
+    { value: "new", label: "새로 생김 (지난 동기화 뒤)" },
+    { value: "pending", label: "아직 실행되지 않음" },
+];
+
+/** 따로 읽어야 하는 보기의 목록 */
+interface itfExtraItems {
+    /** 보기 · 작업 · 실행 ID. 지금 보기와 다르면 읽는 중이다 */
+    key: string;
+    items: itfFileItem[];
+    error: string | null;
+}
+
 /**
  *  내부 함수
  */
+
+/** 제외됨 · 새로 생김 · 아직 실행되지 않음 목록을 읽는다 (F22) */
+async function f_LoadView(
+    listView: typListView,
+    run: itfRunMeta,
+    history: readonly itfRunMeta[],
+    items: readonly itfFileItem[],
+): Promise<itfFileItem[]> {
+    const ref = (runId: string) => ({ jobId: run.jobId, runId });
+    if (listView === "excluded") {
+        return excludedItems(await unwrap(window.rclonegui.runs.excluded(ref(run.runId))));
+    }
+    if (listView === "new") {
+        const baseline = baselineExecute(history, run);
+        if (!baseline?.previewRunId) return [];
+        return newSince(items, await unwrap(window.rclonegui.runs.items(ref(baseline.previewRunId))));
+    }
+    if (listView === "pending" && run.previewRunId) {
+        return pendingAfter(
+            await unwrap(window.rclonegui.runs.items(ref(run.previewRunId))),
+            items,
+            run.mode,
+        );
+    }
+    return [];
+}
 
 /** [동기화] 버튼 문구. 일어날 일을 적는다 */
 function f_SyncLabel(preview: itfRunMeta | null) {
@@ -112,6 +158,10 @@ export default function JobPage(iProps: itfJobPageProps) {
     const [tab, setTab] = useState<typJobPageTab>("compare");
     /** 상태 칩 필터 */
     const [filter, setFilter] = useState(DEFAULT_FILTER);
+    /** "기타" 보기와 그 보기를 고른 실행 (F22). 다른 실행을 열면 칩 보기로 돌아간다 */
+    const [picked, setPicked] = useState<{ view: typListView; runId: string } | null>(null);
+    /** 따로 읽은 보기 목록 */
+    const [extra, setExtra] = useState<itfExtraItems | null>(null);
     /** 트리 / 평면 보기 */
     const [layout, setLayout] = useState<typCompareLayout>("tree");
     /** 확인 창을 연 미리보기. 그 미리보기가 무효가 되면 창도 닫힌다 */
@@ -123,11 +173,43 @@ export default function JobPage(iProps: itfJobPageProps) {
 
     /** 필터를 통과한 파일 목록 */
     const allItems = view?.items;
-    const items = useMemo(() => (allItems ?? []).filter((item) => filter[item.status]), [allItems, filter]);
+    const shownRun = view?.shown ?? null;
+    const history = view?.history;
+    const listView: typListView = picked && picked.runId === shownRun?.runId ? picked.view : "status";
+    /** 따로 읽어야 하는 보기면 그 열쇠 */
+    const extraKey =
+        shownRun && (listView === "excluded" || listView === "new" || listView === "pending")
+            ? `${listView}:${shownRun.jobId}:${shownRun.runId}`
+            : null;
+    const items = useMemo(() => {
+        if (listView === "included") return allItems ?? [];
+        if (listView === "status") return (allItems ?? []).filter((item) => filter[item.status]);
+        return extra && extra.key === extraKey ? extra.items : [];
+    }, [allItems, filter, listView, extra, extraKey]);
 
     //
     // Effect (부수 효과)
     //
+
+    // 제외됨 · 새로 생김 · 아직 실행되지 않음은 고를 때 따로 읽는다 (F22)
+    useEffect(() => {
+        if (extraKey === null || shownRun === null) return;
+        let alive = true;
+        f_LoadView(listView, shownRun, history ?? [], allItems ?? []).then(
+            (loaded) => {
+                if (alive) setExtra({ key: extraKey, items: loaded, error: null });
+            },
+            (error: unknown) => {
+                if (!alive) return;
+                // 목록 자리에도 남기고, 놓치지 않게 알림으로도 보인다
+                setExtra({ key: extraKey, items: [], error: messageOf(error) });
+                notify("error", messageOf(error));
+            },
+        );
+        return () => {
+            alive = false;
+        };
+    }, [extraKey, listView, shownRun, history, allItems, notify]);
 
     // 주기적으로 현재 시각을 갱신해 미리보기 만료를 화면에 반영한다.
     useEffect(() => {
@@ -149,16 +231,42 @@ export default function JobPage(iProps: itfJobPageProps) {
         canRun: rclone !== null && rclone.problem === null,
         /** 필터 전 파일 수 */
         total: allItems?.length ?? 0,
+        /** 따로 읽는 보기를 읽는 중인지 */
+        loading: extraKey !== null && extra?.key !== extraKey,
+        /** 따로 읽은 보기의 오류 */
+        extraError: extraKey !== null && extra?.key === extraKey ? extra.error : null,
         /** 목록이 비었을 때 안내 */
-        emptyText:
-            (allItems?.length ?? 0) === 0
-                ? "표시할 파일이 없습니다"
-                : "선택한 상태의 파일이 없습니다. 위의 칩을 눌러 다른 상태를 보세요",
+        emptyText: f_EmptyText(),
+        /** 아직 실행되지 않음은 미리보기 문구로 보여 준다 */
+        listRun:
+            listView === "pending"
+                ? (history?.find((run) => run.runId === shownRun?.previewRunId) ?? shownRun)
+                : shownRun,
     };
 
     //
     // 이벤트 핸들러 및 내부 함수
     //
+
+    /** 목록이 비었을 때 안내. 보기마다 다르다 */
+    function f_EmptyText() {
+        if (extraKey !== null && extra?.key !== extraKey) {
+            return listView === "excluded" ? "제외된 파일을 읽는 중…" : "목록을 읽는 중…";
+        }
+        if (extraKey !== null && extra?.key === extraKey && extra.error) return extra.error;
+        switch (listView) {
+            case "excluded":
+                return "제외된 파일이 없습니다";
+            case "new":
+                return "지난 동기화 뒤 원본에 새로 생긴 파일이 없습니다";
+            case "pending":
+                return "처리되지 않은 파일이 없습니다";
+            default:
+                return (allItems?.length ?? 0) === 0 || listView === "included"
+                    ? "표시할 파일이 없습니다"
+                    : "선택한 상태의 파일이 없습니다. 위의 칩을 눌러 다른 상태를 보세요";
+        }
+    }
 
     /** 체인의 다음 작업을 고르고 비교를 시작한다 (F09). 실행은 사람이 확인 창에서 한다 */
     async function h_ChainNext(nextId: string) {
@@ -175,7 +283,7 @@ export default function JobPage(iProps: itfJobPageProps) {
 
     /** 상태 칩의 className. 건수가 0이면 꺼진 모양으로 둔다 */
     function f_ChipClass(status: typItemStatus) {
-        return filter[status] && (_V.shown?.counts[status] ?? 0) > 0
+        return listView === "status" && filter[status] && (_V.shown?.counts[status] ?? 0) > 0
             ? `${styles.chip} ${styles.chipOn} ${styles[status]}`
             : styles.chip;
     }
@@ -240,7 +348,19 @@ export default function JobPage(iProps: itfJobPageProps) {
 
     /** 상태 칩을 켜고 끈다 */
     function h_ToggleFilter(status: typItemStatus) {
+        // 다른 보기에서 칩을 누르면 칩 보기로 돌아가기만 한다
+        if (listView !== "status") {
+            setPicked(null);
+            return;
+        }
         setFilter((current) => ({ ...current, [status]: !current[status] }));
+    }
+
+    /** "기타" 보기를 고른다 (F22) */
+    function h_PickView(value: string) {
+        const option = LIST_VIEWS.find((candidate) => candidate.value === value);
+        if (!option || !_V.shown) return;
+        setPicked(option.value === "status" ? null : { view: option.value, runId: _V.shown.runId });
     }
 
     /** 작업을 지운다 */
@@ -376,13 +496,36 @@ export default function JobPage(iProps: itfJobPageProps) {
                                 key={status}
                                 className={f_ChipClass(status)}
                                 onClick={() => h_ToggleFilter(status)}
-                                aria-pressed={filter[status]}
+                                aria-pressed={listView === "status" && filter[status]}
                             >
                                 {chipName(status, _V.shown?.mode ?? job.mode)} {_V.shown?.counts[status] ?? 0}
                             </button>
                         ))}
                         {_V.shown && describeDirs(_V.shown) && (
                             <span className={styles.dirs}>{describeDirs(_V.shown)}</span>
+                        )}
+                        {_V.shown && (
+                            <select
+                                className={styles.viewSelect}
+                                aria-label="기타 보기"
+                                value={listView}
+                                onChange={(event) => h_PickView(event.target.value)}
+                            >
+                                {LIST_VIEWS.map((option) => {
+                                    const problem = _V.shown
+                                        ? viewProblem(option.value, _V.shown, history ?? [])
+                                        : null;
+                                    return (
+                                        <option
+                                            key={option.value}
+                                            value={option.value}
+                                            disabled={problem !== null}
+                                        >
+                                            {problem ? `${option.label} — ${problem}` : option.label}
+                                        </option>
+                                    );
+                                })}
+                            </select>
                         )}
                         <span className={styles.gap} />
                         <div className={styles.layouts} role="group" aria-label="보기">
@@ -408,18 +551,23 @@ export default function JobPage(iProps: itfJobPageProps) {
                             크기 · 수정 시각을 읽지 못했습니다. 경로와 상태만 보여줍니다.
                         </div>
                     )}
-                    {_V.shown && layout === "tree" ? (
+                    {listView === "excluded" && !_V.loading && !_V.extraError && (
+                        <div className={styles.notice}>
+                            지금 읽은 원본 · 대상 목록 기준입니다. 비교 뒤 바뀐 파일은 다를 수 있습니다.
+                        </div>
+                    )}
+                    {_V.shown && _V.listRun && layout === "tree" ? (
                         <JobFileTree
-                            key={_V.shown.runId}
+                            key={`${_V.shown.runId}:${listView}`}
                             items={items}
-                            run={_V.shown}
+                            run={_V.listRun}
                             backup={job.safety.backup}
                             emptyText={_V.emptyText}
                         />
-                    ) : _V.shown ? (
+                    ) : _V.shown && _V.listRun ? (
                         <JobFileList
                             items={items}
-                            run={_V.shown}
+                            run={_V.listRun}
                             backup={job.safety.backup}
                             emptyText={_V.emptyText}
                         />

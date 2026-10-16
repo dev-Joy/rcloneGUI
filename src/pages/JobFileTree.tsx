@@ -27,7 +27,7 @@ import {
     type itfTreeFolder,
     type itfTreeRow,
 } from "@/lib/file-tree";
-import { actionLabel, countsLine, dirActionLabel, formatBytes, formatDateTime } from "@/lib/format";
+import { countsLine, dirActionLabel, formatBytes, formatDateTime, itemActionLabel } from "@/lib/format";
 import { isDestNewer, type itfFileItem, type itfFileSide, type itfRunMeta } from "@/shared/types";
 import styles from "./JobFileTree.module.css";
 
@@ -112,6 +112,7 @@ export default function JobFileTree(iProps: itfJobFileTreeProps) {
             <span className={styles.summary} title={countsLine(folder.counts, run.mode)}>
                 {folder.dirOp && <ZBCBadge tone={folder.dirOp}>{dirActionLabel(folder.dirOp, run)}</ZBCBadge>}
                 <span className={styles.summaryText}>{countsLine(folder.counts, run.mode)}</span>
+                {folder.excluded > 0 && <span className={styles.summaryText}>제외 {folder.excluded}</span>}
                 {folder.newer > 0 && <span className={styles.newer}>대상이 더 최신 {folder.newer}</span>}
             </span>
         );
@@ -119,7 +120,7 @@ export default function JobFileTree(iProps: itfJobFileTreeProps) {
 
     /** 파일 줄의 일어날 일 */
     function f_FileAction(file: itfTreeFile) {
-        const label = actionLabel(file.item.status, run, backup);
+        const label = itemActionLabel(file.item, run, backup);
         const newer = isDestNewer(file.item);
         return (
             <span className={styles.action} title={newer ? `${label} · 대상이 더 최신` : label}>

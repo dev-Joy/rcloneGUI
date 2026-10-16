@@ -313,6 +313,21 @@ describe("buildListArgs (F11)", () => {
             clsCommandError,
         );
     });
+
+    it("필터 없이 읽을 때(F22 제외됨)는 --filter-from만 빠지고 나머지는 같다", () => {
+        const job = makeJob();
+        const all = buildListArgs(job, "source", { filterPath: null, defaultConfig: null });
+        expect(all).toEqual(["lsjson", job.source, "-R", "--files-only", "--skip-links"]);
+        for (const flag of ["--dry-run", "--max-delete", "--backup-dir", "--combined", "sync", "copy"]) {
+            expect(all).not.toContain(flag);
+        }
+        expect(() =>
+            buildListArgs(makeJob({ dest: "--dump=headers" }), "dest", {
+                filterPath: null,
+                defaultConfig: null,
+            }),
+        ).toThrow(clsCommandError);
+    });
 });
 
 describe("동기화 범위 (F25)", () => {

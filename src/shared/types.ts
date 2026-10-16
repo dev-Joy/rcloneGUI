@@ -72,7 +72,20 @@ export interface itfFileItem {
      * same = 실행 뒤에도 남은 폴더(파일이 들어 있었음). 파일 건수 · 삭제 수에 넣지 않는다
      */
     isDir?: boolean;
+    /** 화면용 표시 (F22 기타 보기). excluded = 필터에 걸려 비교에서 빠짐, pending = 할 일이었는데 실행에서 처리되지 않음 */
+    note?: "excluded" | "pending";
 }
+
+/** 제외된 파일 하나 (F22). 필터 없이 읽은 목록에만 있는 파일 */
+export interface itfExcludedItem {
+    path: string;
+    /** 원본 쪽 크기 · 수정 시각. 원본에 없으면 null */
+    source: itfFileSide | null;
+    dest: itfFileSide | null;
+}
+
+/** 비교 결과 목록의 보기 (F22). status는 상태 칩 필터 */
+export type typListView = "status" | "included" | "excluded" | "new" | "pending";
 
 /** 동기화 범위 (F25). files 파일만, all 파일과 원본의 빈 폴더, folders 폴더 구조만 */
 export type typSyncScope = "files" | "all" | "folders";

@@ -37,6 +37,8 @@ export interface itfTreeFolder {
     destSize: number | null;
     /** 대상이 더 최신인데 덮어쓸 파일 수 */
     newer: number;
+    /** 그 아래 제외된 파일 수 (F22 기타 → 제외됨). 상태별 건수에는 넣지 않는다 */
+    excluded: number;
     /** 이 폴더 자체의 작업 (F25). add 폴더 만듦, delete 대상에만 있음(비어 있으면 지움), same 지우려 했지만 남음 */
     dirOp?: "add" | "delete" | "same";
 }
@@ -72,6 +74,7 @@ function f_NewFolder(id: string, name: string): itfTreeFolder {
         sourceSize: null,
         destSize: null,
         newer: 0,
+        excluded: 0,
     };
 }
 
@@ -126,7 +129,8 @@ export function buildFileTree(items: readonly itfFileItem[]): itfTreeFolder {
 
         const newer = isDestNewer(item);
         for (const folder of chain) {
-            folder.counts[item.status] += 1;
+            if (item.note === "excluded") folder.excluded += 1;
+            else folder.counts[item.status] += 1;
             folder.sourceSize = f_AddSize(folder.sourceSize, item.source?.size);
             folder.destSize = f_AddSize(folder.destSize, item.dest?.size);
             if (newer) folder.newer += 1;
