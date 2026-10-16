@@ -98,6 +98,7 @@ async function f_SaveJob(patch: Partial<typJobInput> = {}): Promise<typJob> {
         safety: { backup: true, autoMaxDelete: 50, allowIgnoreErrors: false },
         schedule: { enabled: false, everyMinutes: 30, chainNext: null, cron: null, paused: null },
         rcloneConfig: null,
+        groupId: null,
         ...patch,
     });
 }

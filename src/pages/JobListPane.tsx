@@ -5,7 +5,13 @@
  *  @description
  *      - 왼쪽 작업 목록
  *      - 이름, 모드, 마지막 실행 결과를 보여준다
+ *      - 그룹이 있으면 그룹별로 접고 펴며, 그룹 만들기 · 이름 바꾸기 · 지우기를 한다 (F21)
  */
+
+/**
+ *  External imports
+ */
+import { useState } from "react";
 
 /**
  *  Internal imports
@@ -15,7 +21,8 @@ import ZBCButton from "@/components/ZBCButton";
 import ZBCDot from "@/components/ZBCDot";
 import { formatDateTime } from "@/lib/format";
 import { useApp } from "@/stores/app-store";
-import type { typJob } from "@/shared/types";
+import type { itfGroup, typJob } from "@/shared/types";
+import GroupNameDialog from "./GroupNameDialog";
 import styles from "./JobListPane.module.css";
 
 /**
@@ -46,6 +53,15 @@ export default function JobListPane(iProps: itfJobListPaneProps) {
     const selectedId = useApp((s) => s.selectedId);
     const views = useApp((s) => s.views);
     const select = useApp((s) => s.select);
+    const groups = useApp((s) => s.groups);
+    const deleteGroup = useApp((s) => s.deleteGroup);
+
+    /** 접힌 그룹 ID (F21). 화면 상태에만 둔다. "" 는 그룹 없음 */
+    const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+    /** 이름 대화상자: null 닫힘, "new" 새 그룹, 그 밖에는 이름을 바꿀 그룹 */
+    const [naming, setNaming] = useState<itfGroup | "new" | null>(null);
+    /** 지우기를 한 번 더 묻는 중인 그룹 */
+    const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
     //
     // Effect (부수 효과)
@@ -57,6 +73,8 @@ export default function JobListPane(iProps: itfJobListPaneProps) {
     const _V = {
         /** 실행 기록이 없을 때 보여줄 문구 */
         neverRan: "실행 기록 없음",
+        /** 그룹 없음 아래에 둘 작업. 없는 그룹을 가리키는 작업도 여기에 보여 목록에서 사라지지 않게 한다 */
+        ungrouped: jobs.filter((job) => !groups.some((group) => group.id === job.groupId)),
     };
 
     //
@@ -82,44 +100,138 @@ export default function JobListPane(iProps: itfJobListPaneProps) {
         void select(jobId);
     }
 
+    /** 그룹을 접거나 편다 */
+    function h_Toggle(groupId: string) {
+        setCollapsed((current) => {
+            const next = new Set(current);
+            if (next.has(groupId)) next.delete(groupId);
+            else next.add(groupId);
+            return next;
+        });
+    }
+
+    /** 그룹을 지운다 (한 번 더 확인한 뒤) */
+    function h_DeleteGroup(groupId: string) {
+        setConfirmDelete(null);
+        void deleteGroup(groupId);
+    }
+
+    /** 그룹 머리: 접기 · 이름 · 작업 수, 마우스를 올리면 이름 바꾸기 · 지우기 */
+    function f_GroupHeader(group: itfGroup | null, count: number) {
+        const id = group?.id ?? "";
+        const open = !collapsed.has(id);
+        if (group && confirmDelete === group.id) {
+            return (
+                <div className={styles.confirm}>
+                    <span>
+                        "{group.name}"을(를) 지웁니다. 작업 {count}개는 그룹 없음으로 옮겨집니다.
+                    </span>
+                    <span className={styles.groupActions}>
+                        <ZBCButton small variant="danger" onClick={() => h_DeleteGroup(group.id)}>
+                            지우기
+                        </ZBCButton>
+                        <ZBCButton small onClick={() => setConfirmDelete(null)}>
+                            취소
+                        </ZBCButton>
+                    </span>
+                </div>
+            );
+        }
+        return (
+            <div className={styles.group}>
+                <button
+                    type="button"
+                    className={styles.groupToggle}
+                    aria-expanded={open}
+                    onClick={() => h_Toggle(id)}
+                >
+                    <span className={styles.arrow}>{open ? "▾" : "▸"}</span>
+                    <span className={styles.groupName}>{group?.name ?? "그룹 없음"}</span>
+                    <span className={styles.groupCount}>({count})</span>
+                </button>
+                {group && (
+                    <span className={styles.groupActions}>
+                        <ZBCButton small variant="link" onClick={() => setNaming(group)}>
+                            이름 바꾸기
+                        </ZBCButton>
+                        <ZBCButton small variant="link" onClick={() => setConfirmDelete(group.id)}>
+                            지우기
+                        </ZBCButton>
+                    </span>
+                )}
+            </div>
+        );
+    }
+
+    /** 작업 한 줄 */
+    function f_JobItem(job: typJob) {
+        return (
+            <li key={job.id}>
+                <button
+                    type="button"
+                    className={job.id === selectedId ? `${styles.item} ${styles.selected}` : styles.item}
+                    onClick={() => h_Select(job.id)}
+                >
+                    <ZBCDot tone={f_DotTone(job)} />
+                    <span className={styles.text}>
+                        <span className={styles.name}>{job.name}</span>
+                        <span className={styles.sub}>
+                            <ZBCBadge tone={job.mode === "sync" ? "change" : "add"}>{job.mode}</ZBCBadge>
+                            {f_SubText(job)}
+                            {(job.schedule.enabled || job.schedule.paused) && (
+                                <span
+                                    className={job.schedule.paused ? styles.autoPaused : styles.auto}
+                                    title={job.schedule.paused?.reason ?? "자동 실행 켜짐"}
+                                >
+                                    {job.schedule.paused ? "자동 멈춤" : "자동"}
+                                </span>
+                            )}
+                        </span>
+                    </span>
+                </button>
+            </li>
+        );
+    }
+
+    /** 그룹 하나와 그 작업들 (그룹이 있을 때만) */
+    function f_Section(group: itfGroup | null, members: typJob[]) {
+        const id = group?.id ?? "";
+        return (
+            <li key={`group:${id}`} className={styles.section}>
+                {f_GroupHeader(group, members.length)}
+                {!collapsed.has(id) && (
+                    <ul className={styles.members}>{members.map((job) => f_JobItem(job))}</ul>
+                )}
+            </li>
+        );
+    }
+
     return (
         <aside className={styles.JobListPane}>
-            <div className={styles.title}>작업</div>
+            <div className={styles.title}>{groups.length > 0 ? `모든 작업 (${jobs.length})` : "작업"}</div>
             <ul className={styles.list}>
-                {jobs.map((job) => (
-                    <li key={job.id}>
-                        <button
-                            type="button"
-                            className={
-                                job.id === selectedId ? `${styles.item} ${styles.selected}` : styles.item
-                            }
-                            onClick={() => h_Select(job.id)}
-                        >
-                            <ZBCDot tone={f_DotTone(job)} />
-                            <span className={styles.text}>
-                                <span className={styles.name}>{job.name}</span>
-                                <span className={styles.sub}>
-                                    <ZBCBadge tone={job.mode === "sync" ? "change" : "add"}>
-                                        {job.mode}
-                                    </ZBCBadge>
-                                    {f_SubText(job)}
-                                    {(job.schedule.enabled || job.schedule.paused) && (
-                                        <span
-                                            className={job.schedule.paused ? styles.autoPaused : styles.auto}
-                                            title={job.schedule.paused?.reason ?? "자동 실행 켜짐"}
-                                        >
-                                            {job.schedule.paused ? "자동 멈춤" : "자동"}
-                                        </span>
-                                    )}
-                                </span>
-                            </span>
-                        </button>
-                    </li>
-                ))}
+                {groups.length === 0
+                    ? jobs.map((job) => f_JobItem(job))
+                    : [
+                          ...groups.map((group) =>
+                              f_Section(
+                                  group,
+                                  jobs.filter((job) => job.groupId === group.id),
+                              ),
+                          ),
+                          ...(_V.ungrouped.length > 0 ? [f_Section(null, _V.ungrouped)] : []),
+                      ]}
             </ul>
-            <ZBCButton className={styles.add} onClick={onNew}>
-                + 새 작업
-            </ZBCButton>
+            <div className={styles.addRow}>
+                <ZBCButton onClick={onNew}>+ 새 작업</ZBCButton>
+                <ZBCButton onClick={() => setNaming("new")}>+ 새 그룹</ZBCButton>
+            </div>
+            {naming !== null && (
+                <GroupNameDialog
+                    group={naming === "new" ? undefined : naming}
+                    onClose={() => setNaming(null)}
+                />
+            )}
         </aside>
     );
 }

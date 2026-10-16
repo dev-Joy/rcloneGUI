@@ -1,0 +1,15 @@
+/*
+ *  @author dev-Joy 2026-10-16
+ *  @description
+ *      - GroupNameDialog(그룹 이름 대화상자) 스타일
+ *      - pages 레이어에 배정되어 components 레이어의 공용 스타일을 특이도 무관하게 오버라이드
+ */
+@layer pages {
+    /* 최상단 클래스 - 컴포넌트명과 동일 */
+    .GroupNameDialog {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-width: 320px;
+    }
+}

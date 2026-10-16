@@ -147,6 +147,12 @@ export class clsJobStore {
             throw new clsJobError("CHAIN_SELF", "작업을 자기 자신에게 이을 수 없습니다");
         }
         assertChain(job, jobs);
+        if (
+            job.groupId !== null &&
+            !this.app.db.prepare("SELECT 1 FROM groups WHERE id = ?").get(job.groupId)
+        ) {
+            throw new clsJobError("GROUP_NOT_FOUND", "그룹을 찾을 수 없습니다");
+        }
         if (!isRemote(job.source)) await f_AssertDirectory(job.source);
 
         const index = jobs.findIndex((j) => j.id === id);
@@ -170,6 +176,26 @@ export class clsJobStore {
         this.app.db.prepare("UPDATE jobs SET data = ? WHERE id = ?").run(JSON.stringify(next), jobId);
         this.jobs = (await this.list()).map((j) => (j.id === jobId ? next : j));
         return next;
+    }
+
+    /**
+     * 그룹을 지울 때 그 그룹의 작업을 "그룹 없음"으로 옮길 준비 (F21).
+     * apply()는 바깥 트랜잭션 안에서 DB만 고치고, commit()은 트랜잭션이 끝난 뒤 캐시를 맞춘다.
+     */
+    async prepareClearGroup(groupId: string): Promise<{ apply(): void; commit(): void }> {
+        const jobs = await this.list();
+        const next = jobs.map((j) => (j.groupId === groupId ? { ...j, groupId: null } : j));
+        return {
+            apply: () => {
+                const update = this.app.db.prepare("UPDATE jobs SET data = ? WHERE id = ?");
+                next.forEach((job, i) => {
+                    if (job !== jobs[i]) update.run(JSON.stringify(job), job.id);
+                });
+            },
+            commit: () => {
+                this.jobs = next;
+            },
+        };
     }
 
     async delete(jobId: string): Promise<void> {

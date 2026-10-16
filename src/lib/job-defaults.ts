@@ -34,6 +34,7 @@ export function newJob(settings?: Pick<typSettings, "defaultSource" | "defaultDe
         safety: { backup: true, autoMaxDelete: 50, allowIgnoreErrors: false },
         schedule: { enabled: false, everyMinutes: 30, chainNext: null, cron: null, paused: null },
         rcloneConfig: null,
+        groupId: null,
     };
 }
 

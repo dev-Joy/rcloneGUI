@@ -20,6 +20,7 @@ import type {
     itfRunMeta,
     typPickFolderInput,
     itfAppInfo,
+    itfGroup,
     typSettings,
 } from "./types";
 
@@ -46,6 +47,13 @@ export interface itfRcloneGuiApi {
         resumeSchedule(jobId: string): Promise<typResult<typJob>>;
         /** main이 작업을 바꿨을 때 (자동 실행 멈춤 등). 화면은 목록을 다시 읽는다 */
         onChanged(listener: () => void): () => void;
+    };
+    groups: {
+        list(): Promise<typResult<itfGroup[]>>;
+        /** id가 없으면 새로 만들고, 있으면 이름을 바꾼다 */
+        save(input: { id?: string; name: string }): Promise<typResult<itfGroup>>;
+        /** 그룹을 지우고 그 그룹의 작업은 "그룹 없음"으로 옮긴다 */
+        delete(groupId: string): Promise<typResult<null>>;
     };
     rclone: {
         status(): Promise<typResult<itfRcloneStatus>>;
@@ -90,6 +98,9 @@ export const CHANNELS = {
     jobsDelete: "jobs:delete",
     jobsResumeSchedule: "jobs:resume-schedule",
     jobsChanged: "jobs:changed",
+    groupsList: "groups:list",
+    groupsSave: "groups:save",
+    groupsDelete: "groups:delete",
     rcloneStatus: "rclone:status",
     rcloneRemotes: "rclone:remotes",
     runPreview: "run:preview",

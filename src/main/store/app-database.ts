@@ -28,7 +28,7 @@ import { readJson } from "./json-file";
 export const DB_FILE_NAME = "rclonegui.db";
 
 /** 이 앱이 아는 스키마 버전. 표를 바꿀 때 올리고 f_Migrate에 단계를 더한다. */
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 const SCHEMA_V1 = `
 CREATE TABLE app_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -42,6 +42,11 @@ CREATE TABLE runs (
     UNIQUE (job_id, run_id)
 );
 CREATE INDEX runs_by_job ON runs (job_id, seq DESC);
+`;
+
+// v2 (F21): 작업 그룹. 작업 JSON의 groupId가 이 표의 id를 가리킨다.
+const SCHEMA_V2 = `
+CREATE TABLE groups (id TEXT PRIMARY KEY, name TEXT NOT NULL, position INTEGER NOT NULL);
 `;
 
 interface itfLegacyData {
@@ -66,6 +71,7 @@ function f_Migrate(db: DatabaseSync): void {
     db.exec("BEGIN");
     try {
         if (version < 1) db.exec(SCHEMA_V1);
+        if (version < 2) db.exec(SCHEMA_V2);
         db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
         db.exec("COMMIT");
     } catch (error) {

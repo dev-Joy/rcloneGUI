@@ -33,6 +33,11 @@ const api: itfRcloneGuiApi = {
             return () => ipcRenderer.removeListener(CHANNELS.jobsChanged, h_Changed);
         },
     },
+    groups: {
+        list: () => ipcRenderer.invoke(CHANNELS.groupsList),
+        save: (input) => ipcRenderer.invoke(CHANNELS.groupsSave, input),
+        delete: (groupId) => ipcRenderer.invoke(CHANNELS.groupsDelete, groupId),
+    },
     rclone: {
         status: () => ipcRenderer.invoke(CHANNELS.rcloneStatus),
         remotes: () => ipcRenderer.invoke(CHANNELS.rcloneRemotes),

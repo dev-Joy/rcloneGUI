@@ -247,6 +247,17 @@
 - R1: reviewer REJECTED — buildAboutArgs의 차단 목록 테스트 없음. R2 수정: 쓰기 옵션 없음 · 차단 값이면 던짐 테스트, f_RunCapture · f_RunList가 띄우기 직전 assertSafeArgs, rclone-notes에 앱이 묻는 뿌리 형태. app-verifier R1 APPROVED, 관찰 반영: 용량 줄을 항목별로 묶어 "옮길 크기 29 B"처럼 중간에서 끊기지 않게
 - R2: reviewer · app-verifier 모두 APPROVED. 확인 못 함: 리모트(Drive) 용량, about을 지원하지 않는 백엔드의 "용량 확인 불가" 화면
 
+### [TASK_025] : (2026-10-16) [F21 작업 그룹]
+
+- 명세: `docs/specs/2026-10-16-job-groups.md`
+- DB 스키마 v2(`groups` 표, v1에서 표만 더함), 작업 `groupId`(없으면 null, 없는 그룹이면 GROUP_NOT_FOUND), `clsGroupStore`(목록 · 저장 · 지우기, 이름은 대소문자 무시 중복 거부). 지우면 그 그룹 작업을 한 트랜잭션에서 그룹 없음으로
+- IPC `groups:list/save/delete`, 저장 · 지우기 뒤 `jobs:changed`. 그룹은 실행 설정 지문에 들어가지 않음
+- 화면: 그룹이 있으면 "모든 작업 (N)" 아래 그룹별 접기(▾/▸), 머리에 마우스를 올리면 [이름 바꾸기][지우기](인라인 확인), [+ 새 그룹] · GroupNameDialog, 편집 창 "그룹" 선택
+- 테스트: groups.test.ts 6개(마이그레이션, 저장 · 중복 · 이름 바꾸기, 지우기, 없는 그룹, 지문, 화면의 미리보기 무효 판단)
+- R1: reviewer REJECTED — 화면 saveJob이 그룹만 바꿔도 미리보기를 무효로 함(명세 위반), `.sub` 클래스 중복으로 그룹 안 작업이 가로 배치, 개수 괄호 없음, import 블록. app-verifier R1은 사용량 한도로 끊김
+- R2 수정: `runSettingsOf` · `sameRunSettings`(shared)로 jobHash와 화면 판단을 한 곳에, 명령 값이 바뀔 때만 무효. `.members`, "(N)", External imports 분리, 없는 그룹을 가리키는 작업은 그룹 없음에 표시
+- R2: reviewer · app-verifier 모두 APPROVED. 남은 것: job-store save의 그룹 확인과 쓰기 사이에 그룹 지우기가 끼는 경합(모달이라 화면에선 어려움, 생겨도 그룹 없음에 보임), 잘린 그룹 이름 툴팁 없음, 실제 창 크기 조절은 흉내로만 확인
+
 ## Error
 
 ### [ERR_001] : (2026-10-11) oxlint `no-restricted-imports`의 `group: ["../*"]`가 `../lib/format`을 못 잡음 → TASK_003

@@ -44,6 +44,20 @@ export const jobIdSchema = z
     .string()
     .regex(/^[a-z0-9][a-z0-9-]{0,62}$/, "작업 ID는 영문 소문자·숫자·하이픈만 쓸 수 있습니다");
 
+/** 그룹 ID (F21). main이 g-<시각> 형식으로 만든다 */
+export const groupIdSchema = z.string().regex(/^g-[a-z0-9-]{1,40}$/, "그룹 ID 형식이 아닙니다");
+
+/** 그룹 저장 입력 (F21). 이름 1 ~ 50자, 줄바꿈 금지 */
+export const groupSaveSchema = z.object({
+    id: groupIdSchema.optional(),
+    name: z
+        .string()
+        .trim()
+        .min(1, "그룹 이름을 입력하세요")
+        .max(INPUT_LIMITS.groupName, `그룹 이름은 ${INPUT_LIMITS.groupName}자까지 쓸 수 있습니다`)
+        .refine((v) => !/[\r\n\0]/.test(v), "그룹 이름에 줄바꿈을 넣을 수 없습니다"),
+});
+
 export const runIdSchema = z.string().regex(/^\d{8}-\d{6}(-\d+)?$/, "실행 ID 형식이 아닙니다");
 
 export const jobSchema = z.object({
@@ -95,6 +109,8 @@ export const jobSchema = z.object({
             .default(null),
     }),
     rcloneConfig: pathSchema.nullable(),
+    // F21. 목록을 묶어 보는 그룹. 예전 작업은 그룹 없음.
+    groupId: groupIdSchema.nullable().default(null),
 });
 
 // 새 작업은 ID 없이 저장을 요청하고, main이 이름에서 ID를 만든다.

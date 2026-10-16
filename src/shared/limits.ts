@@ -18,6 +18,8 @@ export const INPUT_LIMITS = {
     excludePattern: 512,
     /** 제외 패턴 줄 수 */
     excludeCount: 200,
+    /** 그룹 이름 (F21) */
+    groupName: 50,
 } as const;
 
 /** 제외 패턴 줄들에서 첫 번째 문제를 안내 문구로 돌려준다. 문제가 없으면 null. */

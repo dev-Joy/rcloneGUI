@@ -88,8 +88,83 @@
             color: var(--zbc-muted);
         }
 
-        .add {
+        .addRow {
+            display: flex;
+            gap: 6px;
             margin: 10px;
+        }
+
+        .section {
+            margin-bottom: 4px;
+        }
+
+        .group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 4px;
+            padding: 0 4px;
+        }
+
+        .groupToggle {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 0;
+            background: none;
+            padding: 6px 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--zbc-muted);
+            text-align: left;
+        }
+
+        .groupName {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .groupCount {
+            font-weight: 400;
+        }
+
+        .arrow {
+            width: 12px;
+            flex: none;
+        }
+
+        /* 이름 바꾸기 · 지우기는 머리에 마우스를 올리거나 키보드로 들어갈 때만 보인다 */
+        .groupActions {
+            display: none;
+            gap: 2px;
+            flex: none;
+        }
+
+        .group:hover .groupActions,
+        .group:focus-within .groupActions,
+        .confirm .groupActions {
+            display: flex;
+        }
+
+        .confirm {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 8px;
+            margin: 0 4px;
+            border: 1px solid var(--zbc-delete);
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .members {
+            list-style: none;
+            margin: 0;
+            padding: 0 0 0 10px;
         }
     }
 }

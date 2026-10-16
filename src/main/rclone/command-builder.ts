@@ -14,7 +14,7 @@ import { createHash } from "node:crypto";
 /**
  *  Internal imports
  */
-import type { typJob, typSyncScope } from "@/shared/types";
+import { runSettingsOf, type typJob, type typSyncScope } from "@/shared/types";
 import { isRemote } from "./paths";
 
 /**
@@ -166,15 +166,8 @@ export function formatCommand(args: readonly string[], exe = "rclone"): string {
 
 /** 미리보기 뒤에 작업 설정이 바뀌었는지 알아내는 지문. 명령에 영향을 주는 값만 넣는다. */
 export function jobHash(job: typJob, defaultConfig: string | null): string {
-    const relevant = {
-        mode: job.mode,
-        source: job.source,
-        dest: job.dest,
-        excludes: job.excludes,
-        options: job.options,
-        backup: job.safety.backup,
-        allowIgnoreErrors: job.safety.allowIgnoreErrors,
-        config: job.rcloneConfig ?? defaultConfig,
-    };
-    return createHash("sha256").update(JSON.stringify(relevant)).digest("hex").slice(0, 16);
+    return createHash("sha256")
+        .update(JSON.stringify(runSettingsOf(job, defaultConfig)))
+        .digest("hex")
+        .slice(0, 16);
 }

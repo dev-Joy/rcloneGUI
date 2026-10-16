@@ -19,6 +19,8 @@ import { z } from "zod";
 import { CHANNELS } from "@/shared/ipc-contract";
 import {
     executeInputSchema,
+    groupIdSchema,
+    groupSaveSchema,
     jobIdSchema,
     jobInputSchema,
     openTargetSchema,
@@ -35,6 +37,7 @@ import type { clsRcloneRunner } from "@/main/rclone/runner";
 import type { clsJobStore } from "@/main/store/job-store";
 import type { clsRunStore } from "@/main/store/run-store";
 import type { clsSettingsStore } from "@/main/store/settings-store";
+import type { clsGroupStore } from "@/main/store/group-store";
 import type { clsScheduler } from "@/main/schedule/scheduler";
 
 /**
@@ -42,6 +45,7 @@ import type { clsScheduler } from "@/main/schedule/scheduler";
  */
 export interface itfIpcDeps {
     jobs: clsJobStore;
+    groups: clsGroupStore;
     runs: clsRunStore;
     settings: clsSettingsStore;
     runner: clsRcloneRunner;
@@ -106,6 +110,18 @@ export function registerIpc(deps: itfIpcDeps): void {
         deps.scheduler.refresh(saved.id);
         deps.onJobsSaved?.();
         return saved;
+    });
+    // 그룹 (F21). 그룹을 지우면 작업의 groupId가 바뀌므로 화면에 다시 읽으라고 알린다.
+    f_Handle(CHANNELS.groupsList, none, () => deps.groups.list());
+    f_Handle(CHANNELS.groupsSave, groupSaveSchema, async (input) => {
+        const group = await deps.groups.save(input);
+        deps.getWindow()?.webContents.send(CHANNELS.jobsChanged);
+        return group;
+    });
+    f_Handle(CHANNELS.groupsDelete, groupIdSchema, async (groupId) => {
+        await deps.groups.delete(groupId);
+        deps.getWindow()?.webContents.send(CHANNELS.jobsChanged);
+        return null;
     });
     f_Handle(CHANNELS.jobsResumeSchedule, jobIdSchema, async (jobId) => {
         const job = await jobs.setPaused(jobId, null);

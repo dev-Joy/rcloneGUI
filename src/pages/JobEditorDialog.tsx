@@ -78,6 +78,8 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
     const saveJob = useApp((s) => s.saveJob);
     /** 이어서 실행할 작업을 고르는 목록 (F09) */
     const allJobs = useApp((s) => s.jobs);
+    /** 작업 그룹 (F21) */
+    const groups = useApp((s) => s.groups);
 
     /** 편집 중인 작업 */
     const [job, setJob] = useState<typJobInput>(initial);
@@ -253,6 +255,23 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
                         autoFocus
                     />
                 </ZBCField>
+                {groups.length > 0 && (
+                    <ZBCField label="그룹" hint="작업 목록에서 묶어 보는 곳입니다. 실행에는 영향이 없습니다.">
+                        <select
+                            className={styles.select}
+                            aria-label="그룹"
+                            value={job.groupId ?? ""}
+                            onChange={(event) => f_Patch({ groupId: event.target.value || null })}
+                        >
+                            <option value="">그룹 없음</option>
+                            {groups.map((group) => (
+                                <option key={group.id} value={group.id}>
+                                    {group.name}
+                                </option>
+                            ))}
+                        </select>
+                    </ZBCField>
+                )}
 
                 <ZBCField label="원본" action={f_Pickers("source")}>
                     <ZBCInput

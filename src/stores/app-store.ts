@@ -17,7 +17,9 @@ import { create } from "zustand";
 import { messageOf } from "@/lib/format";
 import {
     PREVIEW_TTL_MS,
+    sameRunSettings,
     type itfFileItem,
+    type itfGroup,
     type itfProgress,
     type itfRcloneStatus,
     type itfRunMeta,
@@ -50,6 +52,8 @@ export type typNotice = { kind: "error" | "info"; text: string };
 interface itfAppState {
     ready: boolean;
     jobs: typJob[];
+    /** 작업 그룹 (F21) */
+    groups: itfGroup[];
     selectedId: string | null;
     rclone: itfRcloneStatus | null;
     settings: typSettings;
@@ -66,8 +70,12 @@ interface itfAppState {
     cancel(jobId: string): Promise<void>;
     showRun(run: itfRunMeta): Promise<void>;
     saveSettings(settings: typSettings): Promise<boolean>;
-    /** main이 작업을 바꿨을 때 목록을 다시 읽는다 (F10 자동 실행 멈춤) */
+    /** main이 작업을 바꿨을 때 목록을 다시 읽는다 (F10 자동 실행 멈춤, F21 그룹) */
     reloadJobs(): Promise<void>;
+    /** 그룹을 만들거나 이름을 바꾼다 (F21). 성공하면 true */
+    saveGroup(input: { id?: string; name: string }): Promise<boolean>;
+    /** 그룹을 지운다. 그 그룹의 작업은 그룹 없음으로 옮겨진다 (F21) */
+    deleteGroup(groupId: string): Promise<void>;
     /** 스스로 멈춘 자동 실행을 다시 켠다 (F10) */
     resumeSchedule(jobId: string): Promise<void>;
     refreshRclone(): Promise<void>;
@@ -127,6 +135,7 @@ export const useApp = create<itfAppState>((set, get) => {
     return {
         ready: false,
         jobs: [],
+        groups: [],
         selectedId: null,
         rclone: null,
         settings: {
@@ -141,12 +150,13 @@ export const useApp = create<itfAppState>((set, get) => {
 
         async init() {
             await f_Guard(async () => {
-                const [jobs, settings, rclone] = await Promise.all([
+                const [jobs, groups, settings, rclone] = await Promise.all([
                     unwrap(window.rclonegui.jobs.list()),
+                    unwrap(window.rclonegui.groups.list()),
                     unwrap(window.rclonegui.settings.get()),
                     unwrap(window.rclonegui.rclone.status()),
                 ]);
-                set({ jobs, settings, rclone, ready: true });
+                set({ jobs, groups, settings, rclone, ready: true });
                 if (jobs[0]) await get().select(jobs[0].id);
                 // 고르지 않은 작업도 목록에 마지막 실행 시각이 보이게 기록을 읽어 둔다.
                 await Promise.all(
@@ -172,11 +182,14 @@ export const useApp = create<itfAppState>((set, get) => {
 
         async saveJob(input) {
             try {
+                const before = get().jobs.find((job) => job.id === input.id);
                 const saved = await unwrap(window.rclonegui.jobs.save(input));
                 const jobs = await unwrap(window.rclonegui.jobs.list());
                 set({ jobs });
-                // 설정이 바뀌었으니 이전 미리보기로는 실행할 수 없다.
-                f_PatchView(saved.id, { invalidBefore: Date.now() });
+                // 명령이 바뀌었으면 이전 미리보기로는 실행할 수 없다. 이름 · 그룹만 바꾼 것은 그대로 둔다 (F21)
+                if (!before || !sameRunSettings(before, saved)) {
+                    f_PatchView(saved.id, { invalidBefore: Date.now() });
+                }
                 await get().select(saved.id);
                 return saved;
             } catch (error) {
@@ -187,7 +200,11 @@ export const useApp = create<itfAppState>((set, get) => {
 
         async reloadJobs() {
             await f_Guard(async () => {
-                set({ jobs: await unwrap(window.rclonegui.jobs.list()) });
+                const [jobs, groups] = await Promise.all([
+                    unwrap(window.rclonegui.jobs.list()),
+                    unwrap(window.rclonegui.groups.list()),
+                ]);
+                set({ jobs, groups });
                 // 자동 실행이 남긴 기록도 보이게 고른 작업의 기록을 다시 읽는다.
                 const selected = get().selectedId;
                 if (selected) await get().select(selected);
@@ -199,6 +216,28 @@ export const useApp = create<itfAppState>((set, get) => {
                 await unwrap(window.rclonegui.jobs.resumeSchedule(jobId));
                 set({ jobs: await unwrap(window.rclonegui.jobs.list()) });
                 get().notify("info", "자동 실행을 다시 켰습니다");
+            });
+        },
+
+        async saveGroup(input) {
+            try {
+                await unwrap(window.rclonegui.groups.save(input));
+                set({ groups: await unwrap(window.rclonegui.groups.list()) });
+                return true;
+            } catch (error) {
+                get().notify("error", messageOf(error));
+                return false;
+            }
+        },
+
+        async deleteGroup(groupId) {
+            await f_Guard(async () => {
+                await unwrap(window.rclonegui.groups.delete(groupId));
+                const [jobs, groups] = await Promise.all([
+                    unwrap(window.rclonegui.jobs.list()),
+                    unwrap(window.rclonegui.groups.list()),
+                ]);
+                set({ jobs, groups });
             });
         },
 

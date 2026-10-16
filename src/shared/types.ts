@@ -47,6 +47,12 @@ export interface itfAppInfo {
 /** combined 파일의 기호를 뜻으로 옮긴 것. add(+) change(*) delete(-) same(=) error(!) */
 export type typItemStatus = "add" | "change" | "delete" | "same" | "error";
 
+/** 작업 그룹 (F21) */
+export interface itfGroup {
+    id: string;
+    name: string;
+}
+
 /** 한쪽 파일의 크기와 수정 시각 (rclone lsjson, F11) */
 export interface itfFileSide {
     size: number;
@@ -212,3 +218,25 @@ export function isDestNewer(item: itfFileItem): boolean {
 
 /** 미리보기가 유효한 시간 */
 export const PREVIEW_TTL_MS = 30 * 60 * 1000;
+
+/**
+ *  실행 명령에 영향을 주는 작업 설정만 모은다. main의 설정 지문(jobHash)과 화면의 미리보기 무효 판단이 같은 값을 본다.
+ *  이름 · 그룹 · 자동 실행처럼 명령을 바꾸지 않는 값은 넣지 않는다 (F21).
+ */
+export function runSettingsOf(job: typJobInput, defaultConfig: string | null): Record<string, unknown> {
+    return {
+        mode: job.mode,
+        source: job.source,
+        dest: job.dest,
+        excludes: job.excludes,
+        options: job.options,
+        backup: job.safety.backup,
+        allowIgnoreErrors: job.safety.allowIgnoreErrors,
+        config: job.rcloneConfig ?? defaultConfig,
+    };
+}
+
+/** 두 작업 설정이 같은 명령을 만드는지. 다르면 이전 미리보기로 실행할 수 없다 */
+export function sameRunSettings(a: typJobInput, b: typJobInput): boolean {
+    return JSON.stringify(runSettingsOf(a, null)) === JSON.stringify(runSettingsOf(b, null));
+}
