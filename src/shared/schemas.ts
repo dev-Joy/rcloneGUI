@@ -213,6 +213,22 @@ export const runMetaSchema = z.object({
         })
         .nullable()
         .default(null),
+    snapshot: z
+        .object({
+            filter: z.string(),
+            filterTruncated: z.boolean(),
+            config: z
+                .object({
+                    path: z.string(),
+                    source: z.enum(["job", "settings", "default"]),
+                    exists: z.boolean(),
+                    size: z.number().nullable(),
+                    modifiedAt: z.string().nullable(),
+                })
+                .nullable(),
+        })
+        .nullable()
+        .default(null),
     dirs: z
         .object({
             make: countSchema,

@@ -53,6 +53,7 @@ function f_Meta(jobId: string, patch: Partial<itfRunMeta> = {}): itfRunMeta {
         dirs: null,
         trigger: "schedule",
         space: null,
+        snapshot: null,
         ...patch,
     };
 }

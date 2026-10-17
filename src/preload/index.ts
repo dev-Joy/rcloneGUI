@@ -58,6 +58,7 @@ const api: itfRcloneGuiApi = {
         list: (jobId) => ipcRenderer.invoke(CHANNELS.runsList, jobId),
         items: (ref) => ipcRenderer.invoke(CHANNELS.runsItems, ref),
         excluded: (ref) => ipcRenderer.invoke(CHANNELS.runsExcluded, ref),
+        configCheck: (ref) => ipcRenderer.invoke(CHANNELS.runsConfigCheck, ref),
     },
     settings: {
         get: () => ipcRenderer.invoke(CHANNELS.settingsGet),

@@ -265,6 +265,32 @@ describe.skipIf(rclone === null)("RcloneRunner + 실제 rclone", () => {
         }
     });
 
+    it("실행 기록에 그때의 필터와 rclone.conf 지문을 남기고, 지금 파일과 비교한다", async () => {
+        const conf = join(work, "work.conf");
+        await writeFile(conf, "", "utf8");
+        const job = await f_SaveJob({ rcloneConfig: conf });
+        await jobs.setSkip(job.id, ["changed.txt"]);
+        const preview = await f_Preview(job.id);
+        expect(preview.snapshot?.filter).toBe("- /changed.txt\n- node_modules/**\n");
+        expect(preview.snapshot?.config).toMatchObject({ path: conf, source: "job", exists: true, size: 0 });
+        // 다시 읽어도(SQLite) 그대로
+        expect((await runs.read(job.id, preview.runId))?.snapshot).toEqual(preview.snapshot);
+        expect(await runner.checkConfig(job.id, preview.runId)).toBe("same");
+
+        await writeFile(conf, "[remote-a]\ntype = local\n", "utf8");
+        expect(await runner.checkConfig(job.id, preview.runId)).toBe("changed");
+        await rm(conf);
+        expect(await runner.checkConfig(job.id, preview.runId)).toBe("missing");
+        expect(await runner.checkConfig(job.id, "20200101-000000")).toBe("unknown");
+    });
+
+    it("작업 · 설정에 rclone.conf가 없으면 rclone 기본 위치를 기록한다", async () => {
+        const job = await f_SaveJob();
+        const preview = await f_Preview(job.id);
+        expect(preview.snapshot?.config?.source).toBe("default");
+        expect(preview.snapshot?.config?.path).toMatch(/\.conf$/);
+    });
+
     it("cancelAll은 대기 · 실행 중인 rclone을 모두 멈춘다 (앱이 끝날 때)", async () => {
         const a = await f_SaveJob();
         const runId = await runner.preview(a.id);

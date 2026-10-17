@@ -159,6 +159,7 @@ export function registerIpc(deps: itfIpcDeps): void {
     f_Handle(CHANNELS.runsList, jobIdSchema, (jobId) => runs.list(jobId));
     f_Handle(CHANNELS.runsItems, runRefSchema, ({ jobId, runId }) => runs.readItems(jobId, runId));
     f_Handle(CHANNELS.runsExcluded, runRefSchema, ({ jobId, runId }) => runner.readExcluded(jobId, runId));
+    f_Handle(CHANNELS.runsConfigCheck, runRefSchema, ({ jobId, runId }) => runner.checkConfig(jobId, runId));
 
     f_Handle(CHANNELS.settingsGet, none, () => settings.get());
     f_Handle(CHANNELS.settingsSave, settingsSchema, async (value) => {

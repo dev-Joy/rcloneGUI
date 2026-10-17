@@ -18,6 +18,7 @@ import { z } from "zod";
  *  Internal imports
  */
 import type { itfRcloneStatus, itfRemote } from "@/shared/types";
+import { parseConfigFilePath } from "./snapshot";
 
 /**
  *  Types 정의
@@ -117,6 +118,11 @@ export async function getRcloneStatus(configured: string | null): Promise<itfRcl
             problem: `rclone을 실행할 수 없습니다: ${error instanceof Error ? error.message : String(error)}`,
         };
     }
+}
+
+/** rclone이 쓰는 기본 rclone.conf 경로 (`rclone config file`). 파일은 열지 않는다 */
+export async function defaultConfigPath(exe: string): Promise<string | null> {
+    return parseConfigFilePath(await f_Run(exe, ["config", "file"]));
 }
 
 /** `listremotes --long --json` 출력을 읽는다. 이름은 `name:` 형식으로 돌려준다. 형식이 맞지 않으면 던진다 */

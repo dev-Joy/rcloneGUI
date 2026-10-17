@@ -344,6 +344,7 @@ describe("작업·실행 저장소 (임시 폴더)", () => {
             dirs: null,
             trigger: "manual" as const,
             space: null,
+            snapshot: null,
         };
         await runs.write({
             ...base,

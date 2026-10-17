@@ -25,6 +25,8 @@ export interface itfJobHistoryTableProps {
     shownId: string | null;
     onShow: (run: itfRunMeta) => void;
     onOpen: (run: itfRunMeta, target: "runDir" | "backupDir") => void;
+    /** 실행 정보(명령 · 필터 · rclone.conf 지문)를 연다 */
+    onInfo: (run: itfRunMeta) => void;
 }
 
 const propsDefault = {} satisfies Partial<itfJobHistoryTableProps>;
@@ -37,7 +39,7 @@ const propsDefault = {} satisfies Partial<itfJobHistoryTableProps>;
  *  메인 컴포넌트
  */
 export default function JobHistoryTable(iProps: itfJobHistoryTableProps) {
-    const { runs, shownId, onShow, onOpen } = { ...propsDefault, ...iProps };
+    const { runs, shownId, onShow, onOpen, onInfo } = { ...propsDefault, ...iProps };
 
     //
     // hook & state 변수 선언
@@ -68,7 +70,14 @@ export default function JobHistoryTable(iProps: itfJobHistoryTableProps) {
                     <thead>
                         <tr>
                             {_V.columns.map((title, index) => (
-                                <th key={index} className={styles.th}>
+                                <th
+                                    key={index}
+                                    className={
+                                        index === _V.columns.length - 1
+                                            ? `${styles.th} ${styles.actions}`
+                                            : styles.th
+                                    }
+                                >
                                     {title}
                                 </th>
                             ))}
@@ -88,7 +97,7 @@ export default function JobHistoryTable(iProps: itfJobHistoryTableProps) {
                                 <td className={styles.td}>
                                     <ZBCDot tone={run.status} /> {RUN_STATUS_NAMES[run.status]}
                                 </td>
-                                <td className={styles.td}>
+                                <td className={`${styles.td} ${styles.counts}`}>
                                     {[countsLine(run.counts, run.mode), describeDirs(run)]
                                         .filter(Boolean)
                                         .join(" · ")}
@@ -97,9 +106,12 @@ export default function JobHistoryTable(iProps: itfJobHistoryTableProps) {
                                 <td className={`${styles.td} ${styles.message}`} title={run.message}>
                                     {run.message}
                                 </td>
-                                <td className={styles.td}>
+                                <td className={`${styles.td} ${styles.actions}`}>
                                     <ZBCButton variant="link" onClick={() => onShow(run)}>
                                         목록
+                                    </ZBCButton>
+                                    <ZBCButton variant="link" onClick={() => onInfo(run)}>
+                                        정보
                                     </ZBCButton>
                                     <ZBCButton variant="link" onClick={() => onOpen(run, "runDir")}>
                                         로그

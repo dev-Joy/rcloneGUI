@@ -12,6 +12,7 @@
 import type {
     itfExcludedItem,
     itfRemote,
+    typConfigCheck,
     itfFileItem,
     typJob,
     itfJobCommands,
@@ -78,6 +79,8 @@ export interface itfRcloneGuiApi {
         items(ref: itfRunRef): Promise<typResult<itfFileItem[]>>;
         /** 성공한 미리보기에서 필터에 걸려 빠진 파일 (F22). 요청할 때만 계산하고 실행 폴더에 남긴다 */
         excluded(ref: itfRunRef): Promise<typResult<itfExcludedItem[]>>;
+        /** 기록의 rclone.conf 지문과 지금 파일 비교. 경로는 기록에서 꺼낸다 */
+        configCheck(ref: itfRunRef): Promise<typResult<typConfigCheck>>;
     };
     settings: {
         get(): Promise<typResult<typSettings>>;
@@ -118,6 +121,7 @@ export const CHANNELS = {
     runsList: "runs:list",
     runsItems: "runs:items",
     runsExcluded: "runs:excluded",
+    runsConfigCheck: "runs:config-check",
     settingsGet: "settings:get",
     settingsSave: "settings:save",
     appPickFolder: "app:pick-folder",

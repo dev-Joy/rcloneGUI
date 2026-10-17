@@ -29,6 +29,7 @@
             color: var(--zbc-muted);
             background: var(--zbc-surface-2);
             padding: 6px 10px;
+            white-space: nowrap;
         }
 
         .td {
@@ -41,10 +42,36 @@
             background: var(--zbc-surface-2);
         }
 
+        /* 내용 칸이 남는 폭을 쓰고, 좁으면 먼저 줄어들어 오른쪽 단추(목록 · 정보 · 로그 · 백업)가 잘리지 않게 한다 */
         .message {
-            max-width: 320px;
+            width: 100%;
+            max-width: 0;
+            min-width: 80px;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+
+        /* 건수는 길어지면 줄을 바꿔 표가 덜 넓어지게 한다 */
+        .counts {
+            white-space: normal;
+            min-width: 110px;
+        }
+
+        /* 단추 칸은 표를 가로로 밀어도 오른쪽 끝에 붙어 있다 (좁은 창에서도 보이게) */
+        .actions {
+            position: sticky;
+            right: 0;
+            background: var(--zbc-surface);
+            box-shadow: -1px 0 0 var(--zbc-surface-2);
+        }
+
+        .th.actions {
+            z-index: 1;
+            background: var(--zbc-surface-2);
+        }
+
+        .selected .actions {
+            background: var(--zbc-surface-2);
         }
 
         .empty {

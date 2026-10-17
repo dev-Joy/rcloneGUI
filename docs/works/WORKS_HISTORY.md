@@ -318,6 +318,19 @@
 - R1: reviewer REJECTED — 맨 위 sync 경고가 "(백업 폴더로 옮김)"이라 했지만 백업 켬이면 저장이 거부되고 백업 끔이면 백업이 없음, 테스트 이스케이프, JSDoc 위치. app-verifier R1 APPROVED(수정 전 빌드). R2: 경고를 백업 설정별로, 리모트 목록 읽는 중 · 실패 구분, 한계(SR-07 · SR-08이 폴더 ID 사이를 못 봄) 명세에 기록, 마무리 안내 문구 "다 보낸 파일 N개" → reviewer · app-verifier R2 모두 APPROVED
 - 남은 것: SR-07 · SR-08 폴더 ID 한계, 파일 ID를 root_folder_id로 넣을 때 동작 미확인, 백업 끔 + copy 맨 위는 경고 없음(덮어쓴 파일은 백업 없음), 남은 시간이 바이트 기준이라 작은 파일이 많으면 "약 0초", "리모트:" 뒤 공백 없음(이전부터)
 
+### [TASK_032] : (2026-10-17) [실행 스냅샷 · 작업별 rclone.conf 칸 안내]
+
+- 명세: `docs/specs/2026-10-17-run-snapshot.md`. 사용자 "conf 파일은 언제든지 바뀔 수 있으니 그 시점 스냅샷을 남겨야", "1+2번까지 해봐"
+- 처음 제안한 SHA-256 해시는 파일 내용을 읽어야 해 안전 규칙 6에 걸려 뺌(사용자에게 정정). 지문은 stat(경로 · 크기 · 수정 시각)만
+- 실행 메타 `snapshot`: filter.txt 내용(64K자 넘으면 자름) · rclone.conf 지문(출처 job · settings · default. 기본 위치는 `rclone config file`을 rclone 실행 파일마다 물어 두고, 실패는 남기지 않음)
+- `runs:config-check`(실행 ID만 받음) → same · changed · missing · unknown. 실행 기록 [정보] → RunInfoDialog
+- 편집 창 rclone.conf 칸: [파일 선택] · 안내
+- 테스트: snapshot.test.ts(자르기 · config file 파서 · stat · 비교), 통합 2(작업 지정 conf · skip 필터 · 바뀜 · 없음 · 기본 위치)
+- R1: reviewer REJECTED — 필터 한도가 명세(64K)의 8배, 기본 위치 캐시가 rclone 실행 파일별이 아니고 실패도 저장. app-verifier REJECTED — 실행 정보 창 오른쪽 잘림(모달 520px보다 넓은 고정 폭), 좁은 창에서 기록 표 [백업] 잘림
+- R2 수정: 64K자, clsDefaultConfigCache(exe별 · 실패 안 남김) + 테스트, 예전 메타 파싱 테스트, 정보 창 wide 모달 · 고정 폭 제거, 기록 표 내용 칸이 먼저 줄어들고 머리글 줄바꿈 없음
+- R2: reviewer APPROVED. app-verifier REJECTED — 최소 폭(886)에서 기록 표가 604px 상자보다 넓어 단추가 모두 밖으로 밀림(내용 칸만 줄여서는 모자람). R3 수정: 단추 칸을 오른쪽에 고정(sticky), 건수 칸 줄바꿈, 내용 칸 최소 80px
+- R3: reviewer · app-verifier 모두 APPROVED(최소 폭 886에서 단추 모두 보이고 실제 클릭으로 눌림, 밝은 · 어두운 테마 배경). 남은 것: 넓은 창에서도 건수 칸이 두 줄로 접힘, "스냅샷 남기기 전 버전" · "그때 파일이 없었음" · 실행 파일별 기본 위치 구별은 화면으로 못 봄, 첫 실행 때 rclone config file 대기(최대 30초) 동안 기록이 늦게 써짐
+
 ## Error
 
 ### [ERR_001] : (2026-10-11) oxlint `no-restricted-imports`의 `group: ["../*"]`가 `../lib/format`을 못 잡음 → TASK_003

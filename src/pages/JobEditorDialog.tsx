@@ -254,6 +254,12 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
         f_Patch(field === "source" ? { source: location } : { dest: location });
     }
 
+    /** 이 작업만 쓰는 rclone.conf 파일을 고른다 */
+    async function h_PickConfig() {
+        const file = await unwrap(window.rclonegui.app.pickFile()).catch(() => null);
+        if (file) f_Patch({ rcloneConfig: file });
+    }
+
     /** 칸 오른쪽 단추들: [폴더 선택]과 배포판마다 [WSL] */
     function f_Pickers(field: "source" | "dest") {
         return (
@@ -658,7 +664,11 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
                     )}
                 </fieldset>
 
-                <ZBCField label="이 작업만 쓰는 rclone.conf (비워 두면 설정의 기본값)">
+                <ZBCField
+                    label="이 작업만 쓰는 rclone.conf 파일"
+                    action={<ZBCButton onClick={() => void h_PickConfig()}>파일 선택</ZBCButton>}
+                    hint="rclone.conf 파일 경로입니다(예: D:\설정\work.conf). 이 작업에서만 다른 리모트 설정을 쓸 때 지정합니다. 비워 두면 설정 창의 위치를, 그것도 비어 있으면 rclone 기본 위치를 씁니다. 앱은 이 파일을 열지 않고 경로만 rclone에 넘깁니다."
+                >
                     <ZBCInput
                         aria-label="작업 전용 rclone.conf"
                         value={job.rcloneConfig ?? ""}

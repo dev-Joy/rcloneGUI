@@ -1,0 +1,88 @@
+/*
+ *  @author dev-Joy 2026-10-17
+ *  @description
+ *      - RunInfoDialog(실행 정보) 스타일
+ *      - pages 레이어에 배정되어 components 레이어의 공용 스타일을 특이도 무관하게 오버라이드
+ */
+@layer pages {
+    /* 최상단 클래스 - 컴포넌트명과 동일 */
+    .RunInfoDialog {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        /* 모달(넓은 모양) 폭을 따른다. 긴 명령 · 경로는 줄을 바꾼다 */
+        min-width: 0;
+        font-size: 13px;
+
+        .section {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .title {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .code,
+        .filter {
+            margin: 0;
+            padding: 8px 10px;
+            border: 1px solid var(--zbc-border);
+            border-radius: 6px;
+            background: var(--zbc-surface-2);
+            font-family: var(--zbc-font-mono);
+            font-size: 12px;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            max-height: 180px;
+            overflow: auto;
+        }
+
+        .filter {
+            padding-left: 40px;
+        }
+
+        .facts {
+            display: grid;
+            grid-template-columns: max-content 1fr;
+            gap: 4px 12px;
+            margin: 0;
+
+            dt {
+                color: var(--zbc-muted);
+            }
+
+            dd {
+                margin: 0;
+                min-width: 0;
+            }
+        }
+
+        .path {
+            font-family: var(--zbc-font-mono);
+            overflow-wrap: anywhere;
+        }
+
+        .changed {
+            margin: 0;
+            color: var(--zbc-change);
+        }
+
+        .note {
+            margin: 0;
+            font-size: 12px;
+            color: var(--zbc-muted);
+        }
+    }
+}

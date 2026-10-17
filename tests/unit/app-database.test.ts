@@ -61,6 +61,7 @@ function f_RunMeta(patch: Partial<itfRunMeta> = {}): itfRunMeta {
         dirs: null,
         trigger: "manual",
         space: null,
+        snapshot: null,
         ...patch,
     };
 }

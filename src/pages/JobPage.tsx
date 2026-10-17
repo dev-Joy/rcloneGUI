@@ -48,6 +48,7 @@ import JobHistoryTable from "./JobHistoryTable";
 import styles from "./JobPage.module.css";
 import JobRunBanner from "./JobRunBanner";
 import RunConfirmDialog from "./RunConfirmDialog";
+import RunInfoDialog from "./RunInfoDialog";
 
 /**
  *  Props & Types 정의
@@ -172,6 +173,8 @@ export default function JobPage(iProps: itfJobPageProps) {
     const [picked, setPicked] = useState<{ view: typListView; runId: string } | null>(null);
     /** 따로 읽은 보기 목록 */
     const [extra, setExtra] = useState<itfExtraItems | null>(null);
+    /** 실행 정보 창을 연 실행 */
+    const [infoRun, setInfoRun] = useState<itfRunMeta | null>(null);
     /** 열린 줄 메뉴 (F23) */
     const [menu, setMenu] = useState<itfMenuTarget | null>(null);
     const setSkip = useApp((s) => s.setSkip);
@@ -691,6 +694,7 @@ export default function JobPage(iProps: itfJobPageProps) {
                     shownId={_V.shown?.runId ?? null}
                     onShow={h_ShowRun}
                     onOpen={(run, target) => void h_OpenFolder(run, target)}
+                    onInfo={setInfoRun}
                 />
             )}
 
@@ -720,6 +724,7 @@ export default function JobPage(iProps: itfJobPageProps) {
                 )}
             </footer>
 
+            {infoRun && <RunInfoDialog run={infoRun} onClose={() => setInfoRun(null)} />}
             {menu && (
                 <ItemMenu
                     x={menu.x}

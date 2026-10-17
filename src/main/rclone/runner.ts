@@ -33,6 +33,8 @@ import {
     type itfRunSpace,
     type itfSpace,
     type itfExcludedItem,
+    type itfConfigSnapshot,
+    type typConfigCheck,
 } from "@/shared/types";
 import { parseAbout } from "@/main/parsers/about";
 import { parseLsjson } from "@/main/parsers/lsjson";
@@ -57,6 +59,8 @@ import {
     jobHash,
 } from "./command-builder";
 import { diffExcluded } from "./excluded";
+import { defaultConfigPath } from "./locate";
+import { clsDefaultConfigCache, compareConfig, filterSnapshot, statConfig } from "./snapshot";
 import { aboutRoot, backupDirFor, destKey, isRemote } from "./paths";
 
 /**
@@ -244,6 +248,8 @@ export class clsRcloneRunner {
     private readonly queues = new Map<string, Promise<unknown>>();
     /** 계산 중인 제외 목록 (F22). 같은 실행을 동시에 요청하면 한 번만 읽는다 */
     private readonly excludedReads = new Map<string, Promise<itfExcludedItem[]>>();
+    /** rclone 기본 rclone.conf 경로 (rclone config file). rclone 실행 파일마다 한 번만 묻는다 */
+    private readonly defaultConfigCache = new clsDefaultConfigCache(defaultConfigPath);
     private readonly now: () => Date;
     private readonly backupDirFor: NonNullable<itfRunnerDeps["backupDirFor"]>;
 
@@ -429,6 +435,28 @@ export class clsRcloneRunner {
         };
     }
 
+    /**
+     * 그 실행이 쓸 rclone.conf의 지문 (작업 지정 → 설정 → rclone 기본 위치). 파일은 열지 않고 stat만 한다.
+     * 기본 위치는 rclone 실행 파일마다 한 번만 묻는다(실패하면 다음에 다시). 알아내지 못하면 null
+     */
+    private async configSnapshot(
+        exe: string,
+        job: typJob,
+        defaultConfig: string | null,
+    ): Promise<itfConfigSnapshot | null> {
+        if (job.rcloneConfig) return statConfig(job.rcloneConfig, "job");
+        if (defaultConfig) return statConfig(defaultConfig, "settings");
+        const path = await this.defaultConfigCache.get(exe);
+        return path === null ? null : statConfig(path, "default");
+    }
+
+    /** 기록의 rclone.conf 지문과 지금 같은 경로 파일을 비교한다. 파일은 열지 않는다 */
+    async checkConfig(jobId: string, runId: string): Promise<typConfigCheck> {
+        const then = (await this.deps.runs.read(jobId, runId))?.snapshot?.config ?? null;
+        if (then === null) return "unknown";
+        return compareConfig(then, await statConfig(then.path, then.source));
+    }
+
     private async start(
         job: typJob,
         kind: typRunKind,
@@ -455,7 +483,12 @@ export class clsRcloneRunner {
             maxDelete,
             backupDir,
         });
-        await writeFile(filterPath, buildFilterText(job.excludes, job.options.scope, job.skip), "utf8");
+        const filterText = buildFilterText(job.excludes, job.options.scope, job.skip);
+        await writeFile(filterPath, filterText, "utf8");
+        const snapshot = {
+            ...filterSnapshot(filterText),
+            config: await this.configSnapshot(exe, job, defaultConfig),
+        };
         const listArgs =
             kind === "preview" && job.options.readDetails
                 ? {
@@ -491,6 +524,7 @@ export class clsRcloneRunner {
             dirs: null,
             trigger,
             space: null,
+            snapshot,
         };
         await this.deps.runs.write(meta);
 

@@ -153,7 +153,34 @@ export interface itfRunMeta {
     trigger: typRunTrigger;
     /** 미리보기 때의 용량 (F20). 실행 기록 · 예전 기록 · 실패한 미리보기는 null */
     space: itfRunSpace | null;
+    /** 그때의 필터와 rclone.conf 지문. 예전 기록은 null */
+    snapshot: itfRunSnapshot | null;
 }
+
+/** 그 실행이 쓴 rclone.conf가 어디서 정해졌는지: 작업 지정 · 설정 · rclone 기본 위치 */
+export type typConfigSource = "job" | "settings" | "default";
+
+/** rclone.conf 지문. 파일을 열지 않고 stat으로만 얻는다 (내용 · 해시 없음) */
+export interface itfConfigSnapshot {
+    path: string;
+    source: typConfigSource;
+    exists: boolean;
+    size: number | null;
+    /** ISO 시각 */
+    modifiedAt: string | null;
+}
+
+/** 실행할 때의 스냅샷 */
+export interface itfRunSnapshot {
+    /** 그때 만든 filter.txt 내용 */
+    filter: string;
+    filterTruncated: boolean;
+    /** 기본 위치를 알아내지 못하면 null */
+    config: itfConfigSnapshot | null;
+}
+
+/** 기록의 rclone.conf와 지금 같은 경로 파일의 비교 */
+export type typConfigCheck = "same" | "changed" | "missing" | "unknown";
 
 /** 한쪽 드라이브(또는 리모트)의 용량 (F20, rclone about). 백엔드가 주지 않은 값은 null */
 export interface itfSpace {
