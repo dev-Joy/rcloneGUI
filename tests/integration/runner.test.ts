@@ -18,7 +18,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
  *  Internal imports
  */
 import { pendingAfter } from "@/lib/list-views";
-import { findRclone } from "@/main/rclone/locate";
+import { findRclone, listRemotes } from "@/main/rclone/locate";
 import { clsRcloneRunner } from "@/main/rclone/runner";
 import { clsScheduler } from "@/main/schedule/scheduler";
 import { openAppDatabase, type clsAppDatabase } from "@/main/store/app-database";
@@ -251,6 +251,18 @@ describe.skipIf(rclone === null)("RcloneRunner + 실제 rclone", () => {
         expect(preview.message).toBe(
             'rclone 설정에 "nosuchremote" 리모트가 없습니다. rclone config로 만든 리모트 이름을 쓰세요',
         );
+    });
+
+    it("listRemotes는 리모트 이름과 종류를 rclone에게 묻는다 (rclone.conf를 읽지 않음)", async () => {
+        const emptyConfig = join(work, "empty.conf");
+        await writeFile(emptyConfig, "", "utf8");
+        expect(await listRemotes(rclone!, emptyConfig)).toEqual([]);
+        process.env.RCLONE_CONFIG_RGTEST_TYPE = "local";
+        try {
+            expect(await listRemotes(rclone!, emptyConfig)).toEqual([{ name: "rgtest:", type: "local" }]);
+        } finally {
+            delete process.env.RCLONE_CONFIG_RGTEST_TYPE;
+        }
     });
 
     it("cancelAll은 대기 · 실행 중인 rclone을 모두 멈춘다 (앱이 끝날 때)", async () => {

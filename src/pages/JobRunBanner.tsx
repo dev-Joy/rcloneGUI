@@ -48,16 +48,18 @@ function f_ActiveTitle(run: itfRunMeta) {
     return run.kind === "preview" ? "비교하는 중" : "동기화하는 중";
 }
 
-/** 진행률 한 줄. 속도와 남은 시간은 평균으로 쓴다 */
-function f_ProgressText(progress: itfProgress) {
-    const rate = averageRate(progress);
+/** 진행률 한 줄. 속도와 남은 시간은 평균으로 쓴다. 미리보기는 아무것도 보내지 않으므로 쓰지 않는다 */
+function f_ProgressText(progress: itfProgress, kind: itfRunMeta["kind"]) {
+    const rate = kind === "execute" ? averageRate(progress) : { speed: null, eta: null };
     return [
         `확인 ${progress.checks}/${progress.totalChecks}`,
         `전송 ${progress.transfers}/${progress.totalTransfers}`,
         `${formatBytes(progress.bytes)} / ${formatBytes(progress.totalBytes)}`,
         rate.speed !== null ? `평균 ${formatBytes(rate.speed)}/s` : "",
         rate.eta !== null ? `남은 시간 약 ${formatSeconds(rate.eta)}` : "",
-        progress.finishing > 0 ? `리모트가 파일 ${progress.finishing}개를 마무리하는 중` : "",
+        kind === "execute" && progress.finishing > 0
+            ? `다 보낸 파일 ${progress.finishing}개를 마무리하는 중`
+            : "",
         progress.deletes > 0 ? `삭제 ${progress.deletes}` : "",
         progress.errors > 0 ? `오류 ${progress.errors}` : "",
     ]
@@ -97,7 +99,7 @@ export default function JobRunBanner(iProps: itfJobRunBannerProps) {
             <div className={styles.JobRunBanner}>
                 <div className={styles.line}>
                     <b>{f_ActiveTitle(run)}</b>
-                    {progress && <span>{f_ProgressText(progress)}</span>}
+                    {progress && <span>{f_ProgressText(progress, run.kind)}</span>}
                 </div>
                 <div className={styles.track}>
                     <div

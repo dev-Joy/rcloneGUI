@@ -11,6 +11,7 @@
  */
 import type {
     itfExcludedItem,
+    itfRemote,
     itfFileItem,
     typJob,
     itfJobCommands,
@@ -60,7 +61,8 @@ export interface itfRcloneGuiApi {
     };
     rclone: {
         status(): Promise<typResult<itfRcloneStatus>>;
-        remotes(): Promise<typResult<string[]>>;
+        /** 리모트 이름과 종류. Drive 폴더 주소를 연결 문자열로 바꿀 때 drive 종류를 고른다 */
+        remotes(): Promise<typResult<itfRemote[]>>;
     };
     run: {
         /** 시작 즉시 실행 ID를 돌려주고, 진행은 onEvent로 알린다. */

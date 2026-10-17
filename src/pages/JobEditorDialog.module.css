@@ -32,6 +32,18 @@
             white-space: nowrap;
         }
 
+        /* Google Drive 폴더 주소 안내 */
+        .driveHint {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 2px 6px;
+        }
+
+        .driveWarn {
+            color: var(--zbc-change);
+        }
+
         .remotes {
             display: flex;
             flex-wrap: wrap;

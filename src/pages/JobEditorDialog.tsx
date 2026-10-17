@@ -24,8 +24,9 @@ import ZBCTextarea from "@/components/ZBCTextarea";
 import { formatDateTime } from "@/lib/format";
 import { unwrap, useApp } from "@/stores/app-store";
 import { cronProblem, nextScheduleTime } from "@/shared/cron";
+import { driveFolderLocation, parseDriveFolderUrl, parseDriveLocation } from "@/shared/drive-url";
 import { findExcludeProblem, INPUT_LIMITS } from "@/shared/limits";
-import type { typJobInput } from "@/shared/types";
+import type { itfRemote, typJobInput } from "@/shared/types";
 import styles from "./JobEditorDialog.module.css";
 
 /**
@@ -85,8 +86,10 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
     const [job, setJob] = useState<typJobInput>(initial);
     /** 제외 패턴 입력 (줄당 하나) */
     const [excludes, setExcludes] = useState(initial.excludes.join("\n"));
-    /** rclone 리모트 이름 목록 */
-    const [remotes, setRemotes] = useState<string[]>([]);
+    /** rclone 리모트 이름과 종류 */
+    const [remotes, setRemotes] = useState<itfRemote[]>([]);
+    /** 리모트 목록을 받았는지. 받기 전이나 실패했을 때 "Drive 연결이 없습니다"라고 하지 않는다 */
+    const [remotesState, setRemotesState] = useState<"loading" | "loaded" | "failed">("loading");
     /** 저장 요청 중 여부 */
     const [saving, setSaving] = useState(false);
     /** 다음 자동 실행 예정을 셀 기준 시각 (F10). 창을 오래 열어 둬도 지난 시각이 보이지 않게 30초마다 갱신한다 */
@@ -106,7 +109,13 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
 
     useEffect(() => {
         // 리모트가 없거나 rclone이 없어도 편집은 할 수 있어야 하므로 실패는 조용히 넘긴다.
-        unwrap(window.rclonegui.rclone.remotes()).then(setRemotes, () => setRemotes([]));
+        unwrap(window.rclonegui.rclone.remotes()).then(
+            (list) => {
+                setRemotes(list);
+                setRemotesState("loaded");
+            },
+            () => setRemotesState("failed"),
+        );
         // WSL이 없는 PC에서는 빈 목록이다.
         unwrap(window.rclonegui.app.wslDistros()).then(setWslDistros, () => setWslDistros([]));
     }, []);
@@ -161,6 +170,88 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
         ).catch(() => null);
         setWslOpening(null);
         if (folder) f_Patch({ [field]: folder });
+    }
+
+    /**
+     * 경로 칸 아래 Google Drive 안내.
+     * 폴더 웹 주소면 Drive 리모트로 바꾸는 단추, 바꾼 연결 문자열이면 어느 연결인지와 맨 위 sync 경고
+     */
+    function f_DriveHint(field: "source" | "dest") {
+        const value = job[field];
+        const folderId = parseDriveFolderUrl(value);
+        if (folderId) {
+            const drives = remotes.filter((remote) => remote.type === "drive");
+            if (remotesState !== "loaded") {
+                return (
+                    <span className={styles.driveHint}>
+                        Google Drive 폴더 주소입니다.{" "}
+                        {remotesState === "loading"
+                            ? "연결(리모트) 목록을 읽는 중…"
+                            : "연결(리모트) 목록을 읽지 못했습니다. rclone 상태를 확인하세요."}
+                    </span>
+                );
+            }
+            if (drives.length === 0) {
+                return (
+                    <span className={styles.driveWarn}>
+                        Google Drive 연결(rclone 리모트)이 없습니다. 터미널에서{" "}
+                        <code>rclone config create 이름 drive</code>로 만든 뒤 이 창을 다시 여세요.
+                    </span>
+                );
+            }
+            return (
+                <span className={styles.driveHint}>
+                    Google Drive 폴더 주소입니다. 어느 연결로 쓸까요?
+                    {drives.map((remote) => (
+                        <ZBCButton
+                            key={remote.name}
+                            variant="link"
+                            onClick={() => h_UseDrive(field, remote.name, folderId)}
+                        >
+                            {remote.name}
+                        </ZBCButton>
+                    ))}
+                </span>
+            );
+        }
+        const drive = parseDriveLocation(value);
+        if (!drive) return null;
+        return (
+            <span className={styles.driveHint}>
+                Google Drive 폴더 · 연결 {drive.remote}
+                {field === "dest" && drive.subPath === "" && f_DriveRootWarning()}
+            </span>
+        );
+    }
+
+    /**
+     * 대상이 Drive 폴더 맨 위일 때의 경고. 백업 설정에 따라 실제로 일어날 일을 쓴다.
+     * 백업을 켜면 백업 폴더(.rclonegui-backup)가 대상 안에 생기므로 저장이 거부된다(SR-04 · SR-07)
+     */
+    function f_DriveRootWarning() {
+        if (job.safety.backup) {
+            return (
+                <span className={styles.driveWarn}>
+                    {" "}
+                    — 폴더 맨 위는 백업 폴더가 대상 안에 생겨 저장할 수 없습니다. 끝에 하위 폴더 이름을
+                    붙이세요 (예: …:백업)
+                </span>
+            );
+        }
+        if (job.mode !== "sync") return null;
+        return (
+            <span className={styles.driveWarn}>
+                {" "}
+                — 폴더 맨 위로 sync하면 원본에 없는 파일은 백업 없이 지워집니다. 하위 폴더를 쓰려면 끝에
+                이름을 붙이세요
+            </span>
+        );
+    }
+
+    /** Drive 폴더 주소를 그 리모트의 연결 문자열로 바꾼다 */
+    function h_UseDrive(field: "source" | "dest", remote: string, folderId: string) {
+        const location = driveFolderLocation(remote, folderId);
+        f_Patch(field === "source" ? { source: location } : { dest: location });
     }
 
     /** 칸 오른쪽 단추들: [폴더 선택]과 배포판마다 [WSL] */
@@ -273,7 +364,7 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
                     </ZBCField>
                 )}
 
-                <ZBCField label="원본" action={f_Pickers("source")}>
+                <ZBCField label="원본" action={f_Pickers("source")} hint={f_DriveHint("source")}>
                     <ZBCInput
                         aria-label="원본"
                         value={job.source}
@@ -287,19 +378,24 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
                     label="대상"
                     action={f_Pickers("dest")}
                     hint={
-                        remotes.length > 0 && (
-                            <span className={styles.remotes}>
-                                리모트:
-                                {remotes.map((remote) => (
-                                    <ZBCButton
-                                        key={remote}
-                                        variant="link"
-                                        onClick={() => f_Patch({ dest: remote })}
-                                    >
-                                        {remote}
-                                    </ZBCButton>
-                                ))}
-                            </span>
+                        (f_DriveHint("dest") !== null || remotes.length > 0) && (
+                            <>
+                                {f_DriveHint("dest")}
+                                {remotes.length > 0 && (
+                                    <span className={styles.remotes}>
+                                        리모트:
+                                        {remotes.map((remote) => (
+                                            <ZBCButton
+                                                key={remote.name}
+                                                variant="link"
+                                                onClick={() => f_Patch({ dest: remote.name })}
+                                            >
+                                                {remote.name}
+                                            </ZBCButton>
+                                        ))}
+                                    </span>
+                                )}
+                            </>
                         )
                     }
                 >

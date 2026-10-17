@@ -307,6 +307,17 @@
 - 코드 변경 없음(문서만). 남은 것: fast-list
 - 참고: 사용자가 리모트를 자기 GCP client_id로 다시 만듦(공용 client_id 종료 문제 해소). 이전 테스트 폴더는 비어 있었음(휴지통 증가, 원인 미확인)
 
+### [TASK_031] : (2026-10-17) [Google Drive 폴더 주소 붙여 넣기 · 미리보기 진행 줄]
+
+- 명세: `docs/specs/2026-10-17-drive-folder-url.md`. 사용자 "이런 파싱 기능이 있어야 할 것 같다"
+- `src/shared/drive-url.ts`: `parseDriveFolderUrl`(folders · u/N/folders · open?id · folderview?id, 파일 주소 · 다른 도메인 제외), `driveFolderLocation`, `parseDriveLocation`
+- `listRemotes`가 `listremotes --long --json` → `{ name, type }[]`(`parseRemoteList`, fixture listremotes-json.json)
+- 편집 창: Drive 폴더 주소면 drive 리모트 단추(없으면 만드는 방법 안내), 연결 문자열이면 "Google Drive 폴더 · 연결 X"와 맨 위 sync 경고
+- 진행 줄: 미리보기(kind preview)에서는 평균 속도 · 남은 시간 · 마무리 안내를 쓰지 않음(TASK_029 남은 것). 마무리 안내 문구를 "다 보낸 파일 N개를 마무리하는 중"으로(로컬에서도 뜸)
+- 테스트: drive-url(주소 7종 · 아닌 것 8종 · 연결 문자열), parseRemoteList, 통합 listRemotes(빈 설정 · 환경 변수 리모트)
+- R1: reviewer REJECTED — 맨 위 sync 경고가 "(백업 폴더로 옮김)"이라 했지만 백업 켬이면 저장이 거부되고 백업 끔이면 백업이 없음, 테스트 이스케이프, JSDoc 위치. app-verifier R1 APPROVED(수정 전 빌드). R2: 경고를 백업 설정별로, 리모트 목록 읽는 중 · 실패 구분, 한계(SR-07 · SR-08이 폴더 ID 사이를 못 봄) 명세에 기록, 마무리 안내 문구 "다 보낸 파일 N개" → reviewer · app-verifier R2 모두 APPROVED
+- 남은 것: SR-07 · SR-08 폴더 ID 한계, 파일 ID를 root_folder_id로 넣을 때 동작 미확인, 백업 끔 + copy 맨 위는 경고 없음(덮어쓴 파일은 백업 없음), 남은 시간이 바이트 기준이라 작은 파일이 많으면 "약 0초", "리모트:" 뒤 공백 없음(이전부터)
+
 ## Error
 
 ### [ERR_001] : (2026-10-11) oxlint `no-restricted-imports`의 `group: ["../*"]`가 `../lib/format`을 못 잡음 → TASK_003

@@ -47,6 +47,12 @@ export interface itfAppInfo {
 /** combined 파일의 기호를 뜻으로 옮긴 것. add(+) change(*) delete(-) same(=) error(!) */
 export type typItemStatus = "add" | "change" | "delete" | "same" | "error";
 
+/** rclone 리모트 (rclone:remotes). name은 "이름:", type은 drive · s3 등 */
+export interface itfRemote {
+    name: string;
+    type: string;
+}
+
 /** 작업 그룹 (F21) */
 export interface itfGroup {
     id: string;

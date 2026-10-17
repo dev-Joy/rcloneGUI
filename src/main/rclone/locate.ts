@@ -12,16 +12,20 @@
 import { execFile } from "node:child_process";
 import { access, readdir } from "node:fs/promises";
 import { delimiter, join } from "node:path";
+import { z } from "zod";
 
 /**
  *  Internal imports
  */
-import type { itfRcloneStatus } from "@/shared/types";
+import type { itfRcloneStatus, itfRemote } from "@/shared/types";
 
 /**
  *  Types 정의
  */
 const EXE = process.platform === "win32" ? "rclone.exe" : "rclone";
+
+/** listremotes --long --json 한 항목 (그 밖의 필드는 쓰지 않는다) */
+const remoteListSchema = z.array(z.object({ name: z.string().min(1), type: z.string() }));
 
 /**
  *  내부 함수
@@ -115,12 +119,15 @@ export async function getRcloneStatus(configured: string | null): Promise<itfRcl
     }
 }
 
-/** 리모트 이름 목록 (`name:` 형식). rclone.conf 내용은 읽지 않고 rclone에게 묻는다. */
-export async function listRemotes(exe: string, config: string | null): Promise<string[]> {
-    const args = config ? ["listremotes", "--config", config] : ["listremotes"];
-    const out = await f_Run(exe, args);
-    return out
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter((line) => line.endsWith(":"));
+/** `listremotes --long --json` 출력을 읽는다. 이름은 `name:` 형식으로 돌려준다. 형식이 맞지 않으면 던진다 */
+export function parseRemoteList(text: string): itfRemote[] {
+    return remoteListSchema
+        .parse(JSON.parse(text) as unknown)
+        .map((remote) => ({ name: `${remote.name}:`, type: remote.type }));
+}
+
+/** 리모트 이름과 종류 (drive 등). rclone.conf 내용은 읽지 않고 rclone에게 묻는다. */
+export async function listRemotes(exe: string, config: string | null): Promise<itfRemote[]> {
+    const args = ["listremotes", "--long", "--json", ...(config ? ["--config", config] : [])];
+    return parseRemoteList(await f_Run(exe, args));
 }
