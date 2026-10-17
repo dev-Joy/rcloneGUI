@@ -124,6 +124,14 @@ export function registerIpc(deps: itfIpcDeps): void {
         deps.getWindow()?.webContents.send(CHANNELS.jobsChanged);
         return null;
     });
+    f_Handle(CHANNELS.jobsNextRuns, none, async () =>
+        Object.fromEntries(
+            (await jobs.list()).map((job) => [
+                job.id,
+                deps.scheduler.nextRunAt(job.id)?.toISOString() ?? null,
+            ]),
+        ),
+    );
     f_Handle(CHANNELS.jobsResumeSchedule, jobIdSchema, async (jobId) => {
         const job = await jobs.setPaused(jobId, null);
         deps.scheduler.refresh(jobId);

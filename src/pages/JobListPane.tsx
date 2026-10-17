@@ -11,7 +11,7 @@
 /**
  *  External imports
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 /**
  *  Internal imports
@@ -19,8 +19,8 @@ import { useState } from "react";
 import ZBCBadge from "@/components/ZBCBadge";
 import ZBCButton from "@/components/ZBCButton";
 import ZBCDot from "@/components/ZBCDot";
-import { formatDateTime } from "@/lib/format";
-import { useApp } from "@/stores/app-store";
+import { describeSchedule, lastRunText, nextRunText } from "@/lib/schedule-text";
+import { unwrap, useApp } from "@/stores/app-store";
 import type { itfGroup, typJob } from "@/shared/types";
 import GroupNameDialog from "./GroupNameDialog";
 import styles from "./JobListPane.module.css";
@@ -60,6 +60,10 @@ export default function JobListPane(iProps: itfJobListPaneProps) {
     const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
     /** 이름 대화상자: null 닫힘, "new" 새 그룹, 그 밖에는 이름을 바꿀 그룹 */
     const [naming, setNaming] = useState<itfGroup | "new" | null>(null);
+    /** 자동 실행기가 센 다음 실행 시각 (작업 ID → ISO). 30초마다 · 작업이 바뀌면 다시 묻는다 */
+    const [nextRuns, setNextRuns] = useState<Record<string, string | null>>({});
+    /** 다음 실행 문구의 "오늘" 기준 */
+    const [now, setNow] = useState(() => new Date());
     /** 지우기를 한 번 더 묻는 중인 그룹 */
     const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
@@ -67,12 +71,31 @@ export default function JobListPane(iProps: itfJobListPaneProps) {
     // Effect (부수 효과)
     //
 
+    // 다음 실행 시각은 자동 실행기가 앱을 켠 뒤부터 센 값을 쓴다. 30초마다, 작업 목록이 바뀌면 다시 묻는다
+    useEffect(() => {
+        let alive = true;
+        const f_Load = () => {
+            unwrap(window.rclonegui.jobs.nextRuns()).then(
+                (runs) => {
+                    if (!alive) return;
+                    setNextRuns(runs);
+                    setNow(new Date());
+                },
+                () => undefined,
+            );
+        };
+        f_Load();
+        const timer = window.setInterval(f_Load, 30_000);
+        return () => {
+            alive = false;
+            window.clearInterval(timer);
+        };
+    }, [jobs]);
+
     //
     // 내부 변수
     //
     const _V = {
-        /** 실행 기록이 없을 때 보여줄 문구 */
-        neverRan: "실행 기록 없음",
         /** 그룹 없음 아래에 둘 작업. 없는 그룹을 가리키는 작업도 여기에 보여 목록에서 사라지지 않게 한다 */
         ungrouped: jobs.filter((job) => !groups.some((group) => group.id === job.groupId)),
     };
@@ -81,12 +104,18 @@ export default function JobListPane(iProps: itfJobListPaneProps) {
     // 이벤트 핸들러 및 내부 함수
     //
 
-    /** 작업의 마지막 실행 시각 또는 진행 상태 */
+    /** 작업의 최근 실행 (동기화 · 비교) 또는 진행 상태 */
     function f_SubText(job: typJob) {
         const view = views[job.id];
         if (view?.active) return "실행 중";
-        const last = view?.history[0];
-        return last ? formatDateTime(last.startedAt) : _V.neverRan;
+        return lastRunText(view?.history ?? []);
+    }
+
+    /** 자동 실행 줄: 주기와 다음 실행 시각. 멈춤이면 다음 시각은 쓰지 않는다 */
+    function f_ScheduleText(job: typJob) {
+        const period = describeSchedule(job.schedule);
+        const next = nextRuns[job.id];
+        return job.schedule.paused || !next ? period : `${period} · ${nextRunText(new Date(next), now)}`;
     }
 
     /** 작업의 상태 점 색 */
@@ -171,22 +200,33 @@ export default function JobListPane(iProps: itfJobListPaneProps) {
                     type="button"
                     className={job.id === selectedId ? `${styles.item} ${styles.selected}` : styles.item}
                     onClick={() => h_Select(job.id)}
+                    title={[
+                        job.name,
+                        f_SubText(job),
+                        job.schedule.paused
+                            ? `자동 멈춤: ${job.schedule.paused.reason}`
+                            : job.schedule.enabled
+                              ? `자동 ${f_ScheduleText(job)}`
+                              : "",
+                    ]
+                        .filter(Boolean)
+                        .join("\n")}
                 >
                     <ZBCDot tone={f_DotTone(job)} />
                     <span className={styles.text}>
                         <span className={styles.name}>{job.name}</span>
                         <span className={styles.sub}>
                             <ZBCBadge tone={job.mode === "sync" ? "change" : "add"}>{job.mode}</ZBCBadge>
-                            {f_SubText(job)}
-                            {(job.schedule.enabled || job.schedule.paused) && (
-                                <span
-                                    className={job.schedule.paused ? styles.autoPaused : styles.auto}
-                                    title={job.schedule.paused?.reason ?? "자동 실행 켜짐"}
-                                >
+                            <span className={styles.subText}>{f_SubText(job)}</span>
+                        </span>
+                        {(job.schedule.enabled || job.schedule.paused) && (
+                            <span className={styles.sub}>
+                                <span className={job.schedule.paused ? styles.autoPaused : styles.auto}>
                                     {job.schedule.paused ? "자동 멈춤" : "자동"}
                                 </span>
-                            )}
-                        </span>
+                                <span className={styles.subText}>{f_ScheduleText(job)}</span>
+                            </span>
+                        )}
                     </span>
                 </button>
             </li>

@@ -48,6 +48,8 @@ export interface itfRcloneGuiApi {
         delete(jobId: string): Promise<typResult<null>>;
         /** 스스로 멈춘 자동 실행을 다시 켠다 (F10) */
         resumeSchedule(jobId: string): Promise<typResult<typJob>>;
+        /** 자동 실행기가 센 작업별 다음 실행 시각(ISO). 아직 모르면 null */
+        nextRuns(): Promise<typResult<Record<string, string | null>>>;
         /** 이번 실행에서 뺀 항목을 바꾼다 (F23). 바꾸면 그 전 미리보기로는 실행할 수 없다 (SR-13) */
         setSkip(input: { jobId: string; skip: string[] }): Promise<typResult<typJob>>;
         /** main이 작업을 바꿨을 때 (자동 실행 멈춤 등). 화면은 목록을 다시 읽는다 */
@@ -107,6 +109,7 @@ export const CHANNELS = {
     jobsSave: "jobs:save",
     jobsDelete: "jobs:delete",
     jobsResumeSchedule: "jobs:resume-schedule",
+    jobsNextRuns: "jobs:next-runs",
     jobsSetSkip: "jobs:set-skip",
     jobsChanged: "jobs:changed",
     groupsList: "groups:list",
