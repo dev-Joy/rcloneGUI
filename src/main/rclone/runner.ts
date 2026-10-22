@@ -60,6 +60,7 @@ import {
 } from "./command-builder";
 import { diffExcluded } from "./excluded";
 import { defaultConfigPath } from "./locate";
+import { loadJobOptions } from "./options";
 import { clsDefaultConfigCache, compareConfig, filterSnapshot, statConfig } from "./snapshot";
 import { aboutRoot, backupDirFor, destKey, isRemote } from "./paths";
 
@@ -280,7 +281,10 @@ export class clsRcloneRunner {
             throw new clsRunError("PREVIEW_EXPIRED", "미리보기가 30분을 넘었습니다. 다시 비교하세요");
         }
         const latestRunId = await this.deps.runs.latestRunId(input.jobId);
-        const hash = jobHash(job, await this.deps.defaultConfig());
+        // 옵션 파일(F27)도 지금 다시 읽는다. 미리보기 뒤에 바뀌었으면 지문이 달라 거부된다
+        // 여기서 읽은 옵션을 실제 실행에도 그대로 쓴다 (두 번 읽으면 그 사이 바뀐 옵션이 검사 없이 돈다)
+        const extraArgs = await loadJobOptions(job);
+        const hash = jobHash(job, await this.deps.defaultConfig(), extraArgs);
         if (preview.jobHash !== hash || latestRunId !== preview.runId) {
             throw new clsRunError(
                 "PREVIEW_STALE",
@@ -294,7 +298,7 @@ export class clsRcloneRunner {
         if (input.confirmedDeletes !== deletes) {
             throw new clsRunError("CONFIRM_MISMATCH", `확인한 삭제 수가 미리보기(${deletes}개)와 다릅니다`);
         }
-        return this.start(job, "execute", preview.runId, deletes, input.trigger ?? "manual");
+        return this.start(job, "execute", preview.runId, deletes, input.trigger ?? "manual", extraArgs);
     }
 
     /** 그 작업의 실행이 대기 중이거나 도는 중인지 (F10 스케줄러가 겹쳐 돌리지 않게) */
@@ -344,7 +348,8 @@ export class clsRcloneRunner {
 
         const job = await this.deps.jobs.get(jobId);
         const defaultConfig = await this.deps.defaultConfig();
-        if (jobHash(job, defaultConfig) !== meta.jobHash) {
+        const extraArgs = await loadJobOptions(job);
+        if (jobHash(job, defaultConfig, extraArgs) !== meta.jobHash) {
             throw new clsRunError("RUN_STALE", "작업 설정이 바뀌었습니다. 다시 비교하세요");
         }
         const exe = await this.deps.resolveRclone();
@@ -356,13 +361,13 @@ export class clsRcloneRunner {
                 f_RunList(
                     lists,
                     exe,
-                    buildListArgs(job, "source", { filterPath: null, defaultConfig }),
+                    buildListArgs(job, "source", { filterPath: null, defaultConfig, extraArgs }),
                     sourceFile,
                 ),
                 f_RunList(
                     lists,
                     exe,
-                    buildListArgs(job, "dest", { filterPath: null, defaultConfig }),
+                    buildListArgs(job, "dest", { filterPath: null, defaultConfig, extraArgs }),
                     destFile,
                 ),
             ]);
@@ -415,12 +420,13 @@ export class clsRcloneRunner {
         await writeFile(filterPath, buildFilterText(job.excludes, job.options.scope, job.skip), "utf8");
 
         const defaultConfig = await this.deps.defaultConfig();
-        const base = { filterPath, combinedPath: join(dir, "combined.txt"), defaultConfig };
+        const extraArgs = await loadJobOptions(job);
+        const base = { filterPath, combinedPath: join(dir, "combined.txt"), defaultConfig, extraArgs };
         const latest = (await this.deps.runs.list(jobId))[0];
         const fresh =
             latest?.kind === "preview" &&
             latest.status === "success" &&
-            latest.jobHash === jobHash(job, defaultConfig);
+            latest.jobHash === jobHash(job, defaultConfig, extraArgs);
         const manualRunId = `${formatRunId(this.now())}-manual`;
         return {
             preview: formatCommand(buildArgs(job, { ...base, kind: "preview" })),
@@ -463,11 +469,15 @@ export class clsRcloneRunner {
         previewRunId: string | null,
         maxDelete: number | undefined,
         trigger: typRunTrigger,
+        /** 실행(execute)은 검사할 때 읽은 옵션을 넘긴다. 미리보기는 여기서 읽는다 */
+        checkedOptions?: readonly string[],
     ): Promise<string> {
         const exe = await this.deps.resolveRclone();
         if (!isRemote(job.source)) await f_AssertSourceDirectory(job.source);
 
         const defaultConfig = await this.deps.defaultConfig();
+        // 옵션 파일(F27)은 시작할 때마다 다시 읽는다. 없거나 틀리면 기록을 만들기 전에 거부한다
+        const extraArgs = checkedOptions ?? (await loadJobOptions(job));
         const startedAt = this.now();
         const runId = await this.deps.runs.create(job.id, startedAt);
         const dir = this.deps.runs.runDir(job.id, runId);
@@ -482,6 +492,7 @@ export class clsRcloneRunner {
             defaultConfig,
             maxDelete,
             backupDir,
+            extraArgs,
         });
         const filterText = buildFilterText(job.excludes, job.options.scope, job.skip);
         await writeFile(filterPath, filterText, "utf8");
@@ -492,13 +503,13 @@ export class clsRcloneRunner {
         const listArgs =
             kind === "preview" && job.options.readDetails
                 ? {
-                      source: buildListArgs(job, "source", { filterPath, defaultConfig }),
-                      dest: buildListArgs(job, "dest", { filterPath, defaultConfig }),
+                      source: buildListArgs(job, "source", { filterPath, defaultConfig, extraArgs }),
+                      dest: buildListArgs(job, "dest", { filterPath, defaultConfig, extraArgs }),
                   }
                 : null;
         const f_About = (path: string): string[] | null => {
             const rootPath = aboutRoot(path);
-            return rootPath === null ? null : buildAboutArgs(job, rootPath, { defaultConfig });
+            return rootPath === null ? null : buildAboutArgs(job, rootPath, { defaultConfig, extraArgs });
         };
         const aboutArgs =
             kind === "preview" ? { source: f_About(job.source), dest: f_About(job.dest) } : null;
@@ -512,7 +523,7 @@ export class clsRcloneRunner {
             counts: emptyCounts(),
             startedAt: startedAt.toISOString(),
             endedAt: null,
-            jobHash: jobHash(job, defaultConfig),
+            jobHash: jobHash(job, defaultConfig, extraArgs),
             command: formatCommand(args),
             mode: job.mode,
             backupDir,

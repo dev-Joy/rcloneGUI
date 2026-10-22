@@ -125,6 +125,8 @@ export const jobSchema = z.object({
     groupId: groupIdSchema.nullable().default(null),
     // F23. 이번 실행에서 뺀 항목. 성공한 실제 동기화 뒤 main이 비운다. 예전 작업은 없음.
     skip: skipListSchema.default([]),
+    // F27. 작업별 rclone 옵션 파일. 예전 작업은 없음.
+    optionsFile: pathSchema.nullable().default(null),
 });
 
 /** jobs:set-skip 입력 (F23) */

@@ -22,6 +22,9 @@ export const INPUT_LIMITS = {
     groupName: 50,
     /** 이번 실행에서 뺀 항목 수 (F23) */
     skipCount: 200,
+    /** 옵션 파일 줄 수 · 한 줄 글자 수 (F27) */
+    optionCount: 200,
+    optionLine: 512,
 } as const;
 
 /** 제외 패턴 줄들에서 첫 번째 문제를 안내 문구로 돌려준다. 문제가 없으면 null. */

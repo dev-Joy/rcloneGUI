@@ -254,6 +254,12 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
         f_Patch(field === "source" ? { source: location } : { dest: location });
     }
 
+    /** 이 작업의 rclone 옵션 파일을 고른다 (F27) */
+    async function h_PickOptions() {
+        const file = await unwrap(window.rclonegui.app.pickFile()).catch(() => null);
+        if (file) f_Patch({ optionsFile: file });
+    }
+
     /** 이 작업만 쓰는 rclone.conf 파일을 고른다 */
     async function h_PickConfig() {
         const file = await unwrap(window.rclonegui.app.pickFile()).catch(() => null);
@@ -663,6 +669,20 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
                         </div>
                     )}
                 </fieldset>
+
+                <ZBCField
+                    label="rclone 옵션 파일"
+                    action={<ZBCButton onClick={() => void h_PickOptions()}>파일 선택</ZBCButton>}
+                    hint="편집 창에 없는 rclone 옵션을 한 줄에 하나씩 적은 텍스트 파일입니다(예: --bwlimit 10M, --checksum, --drive-chunk-size=64M). 속도 · 비교 방식 · 크기와 날짜 거르기 · 백엔드 설정만 받고, 삭제 한도 · 백업 · 필터 · 로그처럼 앱이 정하는 옵션은 받지 않습니다. 비교 · 실행할 때마다 다시 읽고, 내용은 실행한 명령 기록에 남으니 비밀값은 넣지 마세요."
+                >
+                    <ZBCInput
+                        aria-label="rclone 옵션 파일"
+                        value={job.optionsFile ?? ""}
+                        onChange={(text) => f_Patch({ optionsFile: text.trim() === "" ? null : text })}
+                        placeholder="비워 둠"
+                        maxLength={INPUT_LIMITS.path}
+                    />
+                </ZBCField>
 
                 <ZBCField
                     label="이 작업만 쓰는 rclone.conf 파일"

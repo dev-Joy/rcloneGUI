@@ -17,6 +17,7 @@ import { z } from "zod";
  */
 import { jobSchema } from "@/shared/schemas";
 import type { typJob, typJobInput } from "@/shared/types";
+import { loadJobOptions } from "@/main/rclone/options";
 import { backupRoot, isRemote, isWebAddress, pathsOverlap } from "@/main/rclone/paths";
 import type { clsAppDatabase } from "./app-database";
 
@@ -162,6 +163,8 @@ export class clsJobStore {
             throw new clsJobError("GROUP_NOT_FOUND", "그룹을 찾을 수 없습니다");
         }
         if (!isRemote(job.source)) await f_AssertDirectory(job.source);
+        // F27 · SR-15. 옵션 파일이 있으면 지금 읽어 검사한다 (실행 때도 다시 읽는다)
+        await loadJobOptions(job);
 
         const index = jobs.findIndex((j) => j.id === id);
         const next = index === -1 ? [...jobs, job] : jobs.map((j) => (j.id === id ? job : j));

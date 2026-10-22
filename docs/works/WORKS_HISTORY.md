@@ -341,6 +341,21 @@
 - R1: reviewer REJECTED — `*/45`를 "45분마다"로 표시했지만 cron은 0 ~ 59분 안에서 건너뛰어 실제로 :00 · :45(번갈아 45 · 15분). R2 수정: 60을 나눠 떨어지는 N만 "N분마다", 29 ~ 31일은 식 그대로, 반례 테스트
 - R2: reviewer · app-verifier 모두 APPROVED(cron 7종 문구와 다음 시각이 규칙과 맞음, */20 자동 실행이 실제로 돌고 다음 시각이 넘어감, 좁은 창 · 어두운 테마 말줄임). 남은 것: 실행 기록 100개만 읽어 동기화 뒤 비교가 100번 넘으면 동기화 시각이 빠짐, 시각이 지난 뒤 최대 약 60초 동안 지난 "다음"이 보임, 멈춤 툴팁에 주기 없음, 툴팁이 실제로 뜨는 모습은 title 값으로만 확인
 
+### [TASK_034] : (2026-10-17) [F27 작업별 옵션 파일 · SR-15]
+
+- 명세: `docs/specs/2026-10-17-options-file.md`. 사용자 "남은거랑 다음후보 다해줘"
+- `src/shared/options-file.ts` `parseOptionsText`: 한 줄에 옵션 하나(띄어 쓰기 · =, 큰따옴표 값), # 주석 · 빈 줄 · BOM, 200줄 · 512자, 긴 이름만, 허용 목록(전송 · 비교 방식 · 크기 날짜 거르기 · 백엔드 접두사) 밖은 줄 번호와 이유로 거부
+- `src/main/rclone/options.ts` `loadJobOptions`(64 KiB, 없으면 OPTIONS_INVALID). 저장 · 미리보기 · 실행 검사 · 명령 · 제외됨에서 다시 읽음
+- `buildArgs` · `buildListArgs` · `buildAboutArgs`에 `extraArgs`(앱 옵션 뒤 · 안전 옵션 앞), `jobHash(job, config, options)`, `runSettingsOf`에 optionsFile · options(없으면 예전 지문)
+- 편집 창 "rclone 옵션 파일" 칸 · [파일 선택] · 안내
+- 테스트: options-file.test.ts(형식 · 거부 20종 · 한도), 인자 위치 · 차단 · 지문, 통합 2(명령에 들어가 동작 · 파일이 바뀌면 PREVIEW_STALE, 틀리면 저장 · 미리보기 거부)
+- R1: reviewer REJECTED — 값 없는 옵션 뒤 낱말을 검사 없이 받아 `--checksum --ignore-errors` · `--checksum --config=…`로 허용 · 차단 목록을 우회(rclone이 다른 옵션으로 읽음, 실험 확인), execute 검사와 start가 옵션 파일을 따로 읽어 사이에 바뀐 옵션이 검사 없이 돌 수 있음. 확인 필요: 백엔드 접두사 통째 허용(휴지통 건너뛰기 · 위치 바꾸기 · 비밀값). app-verifier R1은 한도로 끊김
+- R2 수정: 값 없는/있는 옵션 구분 · 백엔드는 =로만 · 값이 -로 시작하면 거부 · 백엔드 위험 이름 거부, assertSafeArgs에 앱 옵션 중복 · 백업 없는 --ignore-errors(실제 동기화) 거부, execute에서 읽은 옵션을 start에 넘김 + 경쟁 재현 통합 테스트(고치기 전 실패 확인), 거부 17종 테스트 추가
+- R2: reviewer REJECTED — 백엔드 설정을 이름만(`--s3-storage-class`) 쓰면 rclone이 다음 인자 `--dry-run`을 값으로 가져가 비교가 실제 동기화로 돌고 대상 파일이 지워짐(재현), 편집 창 예시가 거부되는 형식. R3 수정: 백엔드 설정은 `=값`만(값 없는 것도 =true), 옵션 위치를 원본 · 대상 바로 뒤로(먹혀도 --filter-from이라 rclone이 exit 2로 멈춤, 실험 확인), 예시 문구, 거부 4종 테스트 · 위치 테스트
+- R3: reviewer APPROVED. app-verifier(R2 빌드로 마지막 코드 확인) APPROVED — 저장 거부 문구 · 허용 형식 · 파일만 바꾼 뒤 동기화 거부 · 파일 삭제 뒤 비교 거부(기록 안 생김) · --min-size로 비교 · 제외됨 · 동기화가 같은 기준.
+- 승인 뒤 더한 것(검증 없음, 거부만 늘림): reviewer 권고로 명령을 실행하는 백엔드 설정(ssh · command · shell) 거부 + 테스트 3개, 거부 문구 조사("--checksum는" → "--checksum 옵션은").
+- 남은 것: BACKEND_REFUSED가 이름 일부 일치라 정상 옵션도 막을 수 있음(host · user · url · key), --local-links 같은 파일 집합을 바꾸는 백엔드 설정은 허용(비교 · 동기화에 같은 인자), 네트워크 리모트에서 백엔드 설정 실제 동작은 못 봄, 실행이 PREVIEW_STALE로 거부돼도 화면의 [동기화]가 켜진 채(이전부터)
+
 ## Error
 
 ### [ERR_001] : (2026-10-11) oxlint `no-restricted-imports`의 `group: ["../*"]`가 `../lib/format`을 못 잡음 → TASK_003

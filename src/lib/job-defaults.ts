@@ -35,6 +35,7 @@ export function newJob(settings?: Pick<typSettings, "defaultSource" | "defaultDe
         schedule: { enabled: false, everyMinutes: 30, chainNext: null, cron: null, paused: null },
         rcloneConfig: null,
         groupId: null,
+        optionsFile: null,
         skip: [],
     };
 }

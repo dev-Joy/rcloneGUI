@@ -36,6 +36,8 @@ export interface itfBuildContext {
     maxDelete?: number;
     /** execute이고 백업이 켜져 있을 때 필수 */
     backupDir?: string | null;
+    /** 옵션 파일에서 읽어 검사한 옵션 (F27). 원본 · 대상 바로 뒤, 모든 앱 옵션 앞에 붙는다 */
+    extraArgs?: readonly string[];
 }
 
 /**
@@ -82,7 +84,16 @@ export function escapeGlob(path: string): string {
  * 미리보기에는 --dry-run만, 실행에는 삭제 한도와 백업 폴더만 더한다.
  */
 export function buildArgs(job: typJob, ctx: itfBuildContext): string[] {
-    const args: string[] = [job.mode, job.source, job.dest, "--filter-from", ctx.filterPath];
+    // 옵션 파일의 옵션(F27)은 원본 · 대상 바로 뒤, 앱 옵션 앞에 둔다. 혹시 옵션이 다음 인자를 값으로 가져가도
+    // 그것은 --filter-from이라 필터 경로가 남는 인자가 되어 rclone이 시작 전에 멈춘다. --dry-run · 삭제 한도에는 닿지 않는다
+    const args: string[] = [
+        job.mode,
+        job.source,
+        job.dest,
+        ...(ctx.extraArgs ?? []),
+        "--filter-from",
+        ctx.filterPath,
+    ];
 
     const config = job.rcloneConfig ?? ctx.defaultConfig;
     if (config) args.push("--config", config);
@@ -134,9 +145,10 @@ export function buildArgs(job: typJob, ctx: itfBuildContext): string[] {
 export function buildListArgs(
     job: typJob,
     side: "source" | "dest",
-    ctx: Pick<itfBuildContext, "defaultConfig"> & { filterPath: string | null },
+    ctx: Pick<itfBuildContext, "defaultConfig" | "extraArgs"> & { filterPath: string | null },
 ): string[] {
-    const args: string[] = ["lsjson", job[side], "-R", "--files-only"];
+    // 옵션 파일의 옵션은 맨 앞쪽(앱 옵션 앞)에 둔다 (buildArgs와 같은 이유). 크기 · 날짜 거르기가 같은 파일 집합을 보게 한다
+    const args: string[] = ["lsjson", job[side], "-R", "--files-only", ...(ctx.extraArgs ?? [])];
     if (ctx.filterPath !== null) args.push("--filter-from", ctx.filterPath);
 
     const config = job.rcloneConfig ?? ctx.defaultConfig;
@@ -152,17 +164,38 @@ export function buildListArgs(
 export function buildAboutArgs(
     job: typJob,
     root: string,
-    ctx: Pick<itfBuildContext, "defaultConfig">,
+    ctx: Pick<itfBuildContext, "defaultConfig" | "extraArgs">,
 ): string[] {
-    const args: string[] = ["about", root, "--json"];
+    const args: string[] = ["about", root, "--json", ...(ctx.extraArgs ?? [])];
     const config = job.rcloneConfig ?? ctx.defaultConfig;
     if (config) args.push("--config", config);
     assertSafeArgs(args);
     return args;
 }
 
+/** 앱이 정하는 옵션. 두 번 나오면(나중 값이 이겨 앱 값을 덮으므로) 거부한다 */
+const APP_ONLY_FLAGS = [
+    "--config",
+    "--backup-dir",
+    "--max-delete",
+    "--filter-from",
+    "--combined",
+    "--dry-run",
+];
+
 /** 차단 목록의 옵션이 섞여 있으면 던진다. rclone을 띄우기 직전에도 한 번 더 부른다. */
 export function assertSafeArgs(args: readonly string[]): void {
+    const flags = args.map((arg) => arg.split("=")[0]);
+    for (const flag of APP_ONLY_FLAGS) {
+        if (flags.filter((f) => f === flag).length > 1) {
+            throw new clsCommandError("BLOCKED_OPTION", `앱이 정하는 옵션이 두 번 들어 있습니다: ${flag}`);
+        }
+    }
+    // 실제 동기화(sync · copy, --dry-run 없음)에서 --ignore-errors는 백업 폴더가 있을 때만 (AGENTS.md 1.3)
+    const realSync = (args[0] === "sync" || args[0] === "copy") && !flags.includes("--dry-run");
+    if (realSync && flags.includes("--ignore-errors") && !flags.includes("--backup-dir")) {
+        throw new clsCommandError("BLOCKED_OPTION", "백업 폴더 없이 --ignore-errors를 쓸 수 없습니다");
+    }
     args.forEach((arg, index) => {
         const flag = arg.split("=")[0];
         if (BLOCKED_FLAGS.includes(flag) || BLOCKED_PREFIXES.some((p) => flag.startsWith(p))) {
@@ -182,9 +215,9 @@ export function formatCommand(args: readonly string[], exe = "rclone"): string {
 }
 
 /** 미리보기 뒤에 작업 설정이 바뀌었는지 알아내는 지문. 명령에 영향을 주는 값만 넣는다. */
-export function jobHash(job: typJob, defaultConfig: string | null): string {
+export function jobHash(job: typJob, defaultConfig: string | null, options: readonly string[] = []): string {
     return createHash("sha256")
-        .update(JSON.stringify(runSettingsOf(job, defaultConfig)))
+        .update(JSON.stringify(runSettingsOf(job, defaultConfig, options)))
         .digest("hex")
         .slice(0, 16);
 }

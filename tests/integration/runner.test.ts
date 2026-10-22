@@ -102,6 +102,7 @@ async function f_SaveJob(patch: Partial<typJobInput> = {}): Promise<typJob> {
         schedule: { enabled: false, everyMinutes: 30, chainNext: null, cron: null, paused: null },
         rcloneConfig: null,
         groupId: null,
+        optionsFile: null,
         skip: [],
         ...patch,
     });
@@ -282,6 +283,72 @@ describe.skipIf(rclone === null)("RcloneRunner + 실제 rclone", () => {
         await rm(conf);
         expect(await runner.checkConfig(job.id, preview.runId)).toBe("missing");
         expect(await runner.checkConfig(job.id, "20200101-000000")).toBe("unknown");
+    });
+
+    it("옵션 파일(F27)의 옵션이 명령에 들어가 돌고, 파일이 바뀌면 그 미리보기로는 실행하지 않는다", async () => {
+        const opts = join(work, "opts.txt");
+        await writeFile(opts, "# 시험\n--checksum\n--bwlimit 10M\n", "utf8");
+        const job = await f_SaveJob({ optionsFile: opts });
+        const preview = await f_Preview(job.id);
+        expect(preview.status).toBe("success");
+        expect(preview.command).toContain("--checksum --bwlimit 10M");
+        expect(preview.counts).toMatchObject({ add: 1, change: 1, delete: 1 });
+
+        await writeFile(opts, "--checksum\n", "utf8");
+        await expect(
+            runner.execute({ jobId: job.id, previewRunId: preview.runId, confirmedDeletes: 1 }),
+        ).rejects.toMatchObject({ code: "PREVIEW_STALE" });
+
+        const again = await f_Preview(job.id);
+        expect((await f_Execute(job.id, again.runId, 1)).status).toBe("success");
+        expect((await f_Snapshot(dst))["changed.txt"]).toBe("version 2 longer");
+    });
+
+    it("실행 검사 뒤 시작하는 사이에 옵션 파일이 바뀌어도 검사한 옵션으로 돈다 (F27 R1 검토)", async () => {
+        const opts = join(work, "race-opts.txt");
+        await writeFile(opts, "--checksum\n", "utf8");
+        const job = await f_SaveJob({ optionsFile: opts });
+        const preview = await f_Preview(job.id);
+        // 실행이 rclone 위치를 묻는 순간(검사 뒤, 시작 안)에 파일을 바꾼다
+        const racing = new clsRcloneRunner({
+            jobs,
+            runs,
+            manualDir: join(work, "app", "manual"),
+            resolveRclone: async () => {
+                await writeFile(opts, "--size-only\n", "utf8");
+                return rclone!;
+            },
+            defaultConfig: async () => null,
+            emit: () => undefined,
+            now: () => clock(),
+            backupDirFor: (_dest, jobId, runId) => join(work, "backup", jobId, runId),
+        });
+        const done = await racing.wait(
+            await racing.execute({ jobId: job.id, previewRunId: preview.runId, confirmedDeletes: 1 }),
+        );
+        expect(done?.command).toContain("--checksum");
+        expect(done?.command).not.toContain("--size-only");
+        expect(done?.jobHash).toBe(preview.jobHash);
+    });
+
+    it("옵션 파일이 틀리면 저장 · 미리보기를 거부하고 이유를 알린다 (SR-15)", async () => {
+        const opts = join(work, "bad-opts.txt");
+        await writeFile(opts, "--checksum\n--max-delete 100\n", "utf8");
+        await expect(f_SaveJob({ optionsFile: opts })).rejects.toMatchObject({
+            code: "OPTIONS_INVALID",
+            message: expect.stringContaining("2번째 줄: --max-delete 옵션은"),
+        });
+        // 저장한 뒤 파일이 바뀌어 틀려진 경우: 미리보기를 시작하지 않는다
+        await writeFile(opts, "--checksum\n", "utf8");
+        const job = await f_SaveJob({ optionsFile: opts });
+        await writeFile(opts, "--dump bodies\n", "utf8");
+        await expect(runner.preview(job.id)).rejects.toMatchObject({ code: "OPTIONS_INVALID" });
+        await rm(opts);
+        await expect(runner.preview(job.id)).rejects.toMatchObject({
+            code: "OPTIONS_INVALID",
+            message: expect.stringContaining("옵션 파일을 찾을 수 없습니다"),
+        });
+        expect(await runs.list(job.id)).toEqual([]);
     });
 
     it("작업 · 설정에 rclone.conf가 없으면 rclone 기본 위치를 기록한다", async () => {

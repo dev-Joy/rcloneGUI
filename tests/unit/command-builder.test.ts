@@ -223,6 +223,61 @@ describe("assertSafeArgs", () => {
     });
 });
 
+describe("옵션 파일의 옵션 (F27 · SR-15)", () => {
+    it("원본 · 대상 바로 뒤, 모든 앱 옵션 앞에 붙는다 (다음 인자를 값으로 가져가도 --dry-run에 닿지 않게, R2 검토)", () => {
+        const extraArgs = ["--checksum", "--bwlimit", "10M"];
+        const job = makeJob();
+        const p = buildArgs(job, { ...preview, extraArgs });
+        expect(p.slice(0, 7)).toEqual([
+            job.mode,
+            job.source,
+            job.dest,
+            "--checksum",
+            "--bwlimit",
+            "10M",
+            "--filter-from",
+        ]);
+        expect(p.indexOf("--bwlimit")).toBeLessThan(p.indexOf("--dry-run"));
+        const e = buildArgs(job, { ...execute, extraArgs });
+        expect(e.indexOf("--checksum")).toBeLessThan(e.indexOf("--max-delete"));
+        expect(e.indexOf("--checksum")).toBeLessThan(e.indexOf("--backup-dir"));
+        const list = buildListArgs(job, "source", { filterPath: null, defaultConfig: null, extraArgs });
+        expect(list.slice(4, 7)).toEqual(extraArgs);
+    });
+
+    it("앱이 정하는 옵션이 두 번 나오거나 실제 동기화에 백업 없는 --ignore-errors가 들어오면 막는다", () => {
+        expect(() =>
+            buildArgs(makeJob({ rcloneConfig: "a.conf" }), { ...preview, extraArgs: ["--config=b.conf"] }),
+        ).toThrow("앱이 정하는 옵션이 두 번");
+        expect(() => buildArgs(makeJob(), { ...execute, extraArgs: ["--backup-dir", "x"] })).toThrow("두 번");
+        const noBackup = makeJob({ safety: { ...makeJob().safety, backup: false } });
+        expect(() =>
+            buildArgs(noBackup, { ...execute, backupDir: null, extraArgs: ["--ignore-errors"] }),
+        ).toThrow("백업 폴더 없이 --ignore-errors");
+        // 비교(--dry-run)는 지우지 않으므로 막지 않는다
+        expect(buildArgs(noBackup, { ...preview, extraArgs: ["--ignore-errors"] })).toContain(
+            "--ignore-errors",
+        );
+    });
+
+    it("파서를 지나쳐 들어온 차단 옵션도 생성 결과에서 막힌다", () => {
+        expect(() => buildArgs(makeJob(), { ...preview, extraArgs: ["--delete-excluded"] })).toThrow(
+            clsCommandError,
+        );
+        expect(() => buildArgs(makeJob(), { ...execute, extraArgs: ["--max-delete=-1"] })).toThrow(
+            clsCommandError,
+        );
+    });
+
+    it("옵션이 바뀌면 지문이 바뀌고, 옵션 파일이 없으면 예전 지문 그대로다", () => {
+        const job = makeJob();
+        expect(jobHash({ ...job, optionsFile: null }, null, [])).toBe(jobHash(job, null));
+        const withFile = { ...job, optionsFile: "C:\\work\\opts.txt" };
+        expect(jobHash(withFile, null, ["--checksum"])).not.toBe(jobHash(withFile, null, ["--size-only"]));
+        expect(jobHash(withFile, null, [])).not.toBe(jobHash(job, null, []));
+    });
+});
+
 describe("buildFilterText", () => {
     it('제외 패턴마다 "- 패턴" 한 줄을 쓴다', () => {
         expect(buildFilterText(["node_modules/**", ".codegraph/daemon.sock"])).toBe(

@@ -273,7 +273,11 @@ export const PREVIEW_TTL_MS = 30 * 60 * 1000;
  *  실행 명령에 영향을 주는 작업 설정만 모은다. main의 설정 지문(jobHash)과 화면의 미리보기 무효 판단이 같은 값을 본다.
  *  이름 · 그룹 · 자동 실행처럼 명령을 바꾸지 않는 값은 넣지 않는다 (F21).
  */
-export function runSettingsOf(job: typJobInput, defaultConfig: string | null): Record<string, unknown> {
+export function runSettingsOf(
+    job: typJobInput,
+    defaultConfig: string | null,
+    options: readonly string[] = [],
+): Record<string, unknown> {
     return {
         mode: job.mode,
         source: job.source,
@@ -285,6 +289,9 @@ export function runSettingsOf(job: typJobInput, defaultConfig: string | null): R
         config: job.rcloneConfig ?? defaultConfig,
         // F23. 비어 있으면 넣지 않아 예전 지문과 같다
         ...(job.skip.length > 0 ? { skip: job.skip } : {}),
+        // F27. 옵션 파일 경로(화면도 안다)와 main이 읽은 내용. 없으면 넣지 않아 예전 지문과 같다
+        ...(job.optionsFile ? { optionsFile: job.optionsFile } : {}),
+        ...(options.length > 0 ? { options } : {}),
     };
 }
 
