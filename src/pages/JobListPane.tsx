@@ -204,7 +204,7 @@ export default function JobListPane(iProps: itfJobListPaneProps) {
                         job.name,
                         f_SubText(job),
                         job.schedule.paused
-                            ? `자동 멈춤: ${job.schedule.paused.reason}`
+                            ? `자동 실행 멈춤: ${job.schedule.paused.reason}`
                             : job.schedule.enabled
                               ? `자동 ${f_ScheduleText(job)}`
                               : "",
@@ -222,7 +222,7 @@ export default function JobListPane(iProps: itfJobListPaneProps) {
                         {(job.schedule.enabled || job.schedule.paused) && (
                             <span className={styles.sub}>
                                 <span className={job.schedule.paused ? styles.autoPaused : styles.auto}>
-                                    {job.schedule.paused ? "자동 멈춤" : "자동"}
+                                    {job.schedule.paused ? "자동 실행 멈춤" : "자동"}
                                 </span>
                                 <span className={styles.subText}>{f_ScheduleText(job)}</span>
                             </span>

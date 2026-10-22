@@ -212,7 +212,7 @@ export function describeExit(code: number | null, errors: readonly string[]): st
         return `rclone 설정에 "${unknownRemote[1]}" 리모트가 없습니다. rclone config로 만든 리모트 이름을 쓰세요`;
     }
     if (errors.some((line) => line.includes("max-delete threshold"))) {
-        return "삭제 한도에 걸려 멈췄습니다. 미리보기 뒤에 원본이나 대상이 바뀌었습니다. 다시 비교하세요";
+        return "삭제 한도에 걸려 멈췄습니다. 비교 뒤에 원본이나 대상이 바뀌었습니다. 다시 비교하세요";
     }
     switch (code) {
         case 0:
@@ -275,10 +275,10 @@ export class clsRcloneRunner {
         const job = await this.deps.jobs.get(input.jobId);
         const preview = await this.deps.runs.read(input.jobId, input.previewRunId);
         if (!preview || preview.kind !== "preview" || preview.status !== "success" || !preview.endedAt) {
-            throw new clsRunError("PREVIEW_INVALID", "끝난 미리보기가 없습니다. 먼저 비교하세요");
+            throw new clsRunError("PREVIEW_INVALID", "끝난 비교 결과가 없습니다. 먼저 비교하세요");
         }
         if (this.now().getTime() - new Date(preview.endedAt).getTime() > PREVIEW_TTL_MS) {
-            throw new clsRunError("PREVIEW_EXPIRED", "미리보기가 30분을 넘었습니다. 다시 비교하세요");
+            throw new clsRunError("PREVIEW_EXPIRED", "비교한 지 30분이 넘었습니다. 다시 비교하세요");
         }
         const latestRunId = await this.deps.runs.latestRunId(input.jobId);
         // 옵션 파일(F27)도 지금 다시 읽는다. 미리보기 뒤에 바뀌었으면 지문이 달라 거부된다
@@ -288,7 +288,7 @@ export class clsRcloneRunner {
         if (preview.jobHash !== hash || latestRunId !== preview.runId) {
             throw new clsRunError(
                 "PREVIEW_STALE",
-                "미리보기 뒤에 작업 설정이나 실행 기록이 바뀌었습니다. 다시 비교하세요",
+                "비교 뒤에 작업 설정이나 기록이 바뀌었습니다. 다시 비교하세요",
             );
         }
         if (preview.blocked === "EMPTY_SOURCE") {
@@ -296,7 +296,7 @@ export class clsRcloneRunner {
         }
         const deletes = plannedDeletes(preview);
         if (input.confirmedDeletes !== deletes) {
-            throw new clsRunError("CONFIRM_MISMATCH", `확인한 삭제 수가 미리보기(${deletes}개)와 다릅니다`);
+            throw new clsRunError("CONFIRM_MISMATCH", `확인한 삭제 수가 비교 결과(${deletes}개)와 다릅니다`);
         }
         return this.start(job, "execute", preview.runId, deletes, input.trigger ?? "manual", extraArgs);
     }
@@ -334,7 +334,7 @@ export class clsRcloneRunner {
         if (!meta || meta.kind !== "preview" || meta.status !== "success") {
             throw new clsRunError(
                 "EXCLUDED_UNAVAILABLE",
-                "성공한 미리보기에서만 제외된 파일을 볼 수 있습니다",
+                "성공한 비교 결과에서만 제외된 파일을 볼 수 있습니다",
             );
         }
         const dir = this.deps.runs.runDir(jobId, runId);

@@ -52,14 +52,12 @@ function f_ActiveTitle(run: itfRunMeta) {
 function f_ProgressText(progress: itfProgress, kind: itfRunMeta["kind"]) {
     const rate = kind === "execute" ? averageRate(progress) : { speed: null, eta: null };
     return [
-        `확인 ${progress.checks}/${progress.totalChecks}`,
-        `전송 ${progress.transfers}/${progress.totalTransfers}`,
+        `비교 ${progress.checks}/${progress.totalChecks}`,
+        `보냄 ${progress.transfers}/${progress.totalTransfers}`,
         `${formatBytes(progress.bytes)} / ${formatBytes(progress.totalBytes)}`,
         rate.speed !== null ? `평균 ${formatBytes(rate.speed)}/s` : "",
         rate.eta !== null ? `남은 시간 약 ${formatSeconds(rate.eta)}` : "",
-        kind === "execute" && progress.finishing > 0
-            ? `다 보낸 파일 ${progress.finishing}개를 마무리하는 중`
-            : "",
+        kind === "execute" && progress.finishing > 0 ? `전송 마무리 중 ${progress.finishing}개` : "",
         progress.deletes > 0 ? `삭제 ${progress.deletes}` : "",
         progress.errors > 0 ? `오류 ${progress.errors}` : "",
     ]
@@ -116,7 +114,7 @@ export default function JobRunBanner(iProps: itfJobRunBannerProps) {
         if (run.blocked === "EMPTY_SOURCE") {
             return (
                 <div className={`${styles.JobRunBanner} ${styles.failed}`}>
-                    <b>실행을 막았습니다.</b> 원본에 파일이 하나도 없습니다. 이대로 sync하면 대상의{" "}
+                    <b>동기화를 막았습니다.</b> 원본에 파일이 하나도 없습니다. 이대로 sync하면 대상의{" "}
                     {run.counts.delete}개 파일이 모두 지워집니다. 원본 경로를 확인하세요.
                 </div>
             );
@@ -125,7 +123,7 @@ export default function JobRunBanner(iProps: itfJobRunBannerProps) {
             if (run.counts.error === 0) return null;
             return (
                 <div className={`${styles.JobRunBanner} ${styles.failed}`}>
-                    읽기 오류가 {run.counts.error}개 있습니다. 이 상태로 실행하면 rclone이 삭제를 모두
+                    읽기 오류가 {run.counts.error}개 있습니다. 이 상태로 동기화하면 rclone이 삭제를 모두
                     보류합니다.
                 </div>
             );
@@ -158,7 +156,7 @@ export default function JobRunBanner(iProps: itfJobRunBannerProps) {
                             <li key={index}>{line}</li>
                         ))}
                         {run.errors.length > maxErrors && (
-                            <li>… 외 {run.errors.length - maxErrors}줄 (실행 기록의 로그 폴더 참고)</li>
+                            <li>… 외 {run.errors.length - maxErrors}줄 (기록 탭의 [로그] 참고)</li>
                         )}
                     </ul>
                 )}

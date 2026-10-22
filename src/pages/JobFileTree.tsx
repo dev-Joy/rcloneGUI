@@ -186,7 +186,7 @@ export default function JobFileTree(iProps: itfJobFileTreeProps) {
         },
         {
             key: "action",
-            title: "일어날 일",
+            title: _V.executed ? "한 일" : "할 일",
             // "원본으로 덮어씀" 배지와 "대상이 더 최신"이 함께 들어가는 폭(약 180px). 좁으면 시각 열이 먼저 줄어든다
             width: "minmax(190px, 1.6fr)",
             align: "center",

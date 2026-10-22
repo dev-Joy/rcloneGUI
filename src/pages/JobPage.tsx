@@ -82,11 +82,11 @@ const DEFAULT_FILTER: Record<typItemStatus, boolean> = {
 
 /** "기타" 보기 (F22). status는 상태 칩 필터 */
 const LIST_VIEWS: { value: typListView; label: string }[] = [
-    { value: "status", label: "기타: 상태 칩대로" },
-    { value: "included", label: "포함됨 (비교에 든 모든 항목)" },
-    { value: "excluded", label: "제외됨 (필터에 걸린 파일)" },
-    { value: "new", label: "새로 생김 (지난 동기화 뒤)" },
-    { value: "pending", label: "아직 실행되지 않음" },
+    { value: "status", label: "보기: 상태별" },
+    { value: "included", label: "이 목록의 파일 전체" },
+    { value: "excluded", label: "제외 패턴에 걸린 파일" },
+    { value: "new", label: "지난 동기화 뒤 새로 생긴 파일" },
+    { value: "pending", label: "이번 동기화에서 처리 못 한 파일" },
 ];
 
 /** 열린 줄 메뉴 (F23). path는 비교 목록의 상대 경로, 폴더는 끝에 / */
@@ -137,7 +137,7 @@ async function f_LoadView(
 
 /** [동기화] 버튼 문구. 일어날 일을 적는다 */
 function f_SyncLabel(preview: itfRunMeta | null) {
-    if (!preview) return "동기화 (먼저 비교)";
+    if (!preview) return "동기화 — 먼저 [비교]를 누르세요";
     return hasChanges(preview) ? `동기화: ${describeChanges(preview)}` : "동기화: 바뀔 것 없음";
 }
 
@@ -165,7 +165,7 @@ export default function JobPage(iProps: itfJobPageProps) {
     const notify = useApp((s) => s.notify);
     const resumeSchedule = useApp((s) => s.resumeSchedule);
 
-    /** 비교 결과 / 실행 기록 탭 */
+    /** 파일 목록 / 기록 탭 */
     const [tab, setTab] = useState<typJobPageTab>("compare");
     /** 상태 칩 필터 */
     const [filter, setFilter] = useState(DEFAULT_FILTER);
@@ -173,6 +173,8 @@ export default function JobPage(iProps: itfJobPageProps) {
     const [picked, setPicked] = useState<{ view: typListView; runId: string } | null>(null);
     /** 따로 읽은 보기 목록 */
     const [extra, setExtra] = useState<itfExtraItems | null>(null);
+    /** 작업 이름 줄의 [⋯] 메뉴 위치 */
+    const [toolsMenu, setToolsMenu] = useState<{ x: number; y: number } | null>(null);
     /** 실행 정보 창을 연 실행 */
     const [infoRun, setInfoRun] = useState<itfRunMeta | null>(null);
     /** 열린 줄 메뉴 (F23) */
@@ -276,11 +278,11 @@ export default function JobPage(iProps: itfJobPageProps) {
             case "new":
                 return "지난 동기화 뒤 원본에 새로 생긴 파일이 없습니다";
             case "pending":
-                return "처리되지 않은 파일이 없습니다";
+                return "처리 못 한 파일이 없습니다";
             default:
                 return (allItems?.length ?? 0) === 0 || listView === "included"
                     ? "표시할 파일이 없습니다"
-                    : "선택한 상태의 파일이 없습니다. 위의 칩을 눌러 다른 상태를 보세요";
+                    : "선택한 상태의 파일이 없습니다. 위의 상태 단추를 눌러 다른 상태를 보세요";
         }
     }
 
@@ -341,7 +343,7 @@ export default function JobPage(iProps: itfJobPageProps) {
         try {
             const commands = await unwrap(window.rclonegui.run.command(job.id));
             await unwrap(window.rclonegui.app.copyText(commands[which]));
-            notify("info", which === "preview" ? "미리보기 명령을 복사했습니다" : "실행 명령을 복사했습니다");
+            notify("info", which === "preview" ? "비교 명령을 복사했습니다" : "동기화 명령을 복사했습니다");
         } catch (error) {
             notify("error", messageOf(error));
         }
@@ -372,7 +374,7 @@ export default function JobPage(iProps: itfJobPageProps) {
         setFilter((current) => ({ ...current, [status]: !current[status] }));
     }
 
-    /** 이 줄을 이번 실행에서 뺄 수 있는지 (F23). 미리보기에서 할 일이 있는 파일과 폴더만 */
+    /** 이 줄을 이번 동기화에서 뺄 수 있는지 (F23). 미리보기에서 할 일이 있는 파일과 폴더만 */
     function f_CanSkip(target: itfMenuTarget) {
         if (_V.shown?.kind !== "preview" || listView === "excluded" || listView === "pending") return false;
         const { item } = target;
@@ -391,7 +393,7 @@ export default function JobPage(iProps: itfJobPageProps) {
         if (f_CanSkip(target) || job.skip.includes(target.path)) {
             const skipped = job.skip.includes(target.path);
             entries.push({
-                label: skipped ? "다시 넣기 (빼기 취소)" : "이번 실행에서 빼기",
+                label: skipped ? "다시 넣기" : "이번 동기화에서 빼기",
                 onSelect: () => void h_ToggleSkip(target.path, skipped),
             });
         }
@@ -409,16 +411,16 @@ export default function JobPage(iProps: itfJobPageProps) {
         setMenu({ path, item, x, y });
     }
 
-    /** 이번 실행에서 빼거나 다시 넣는다 (F23 · SR-13) */
+    /** 이번 동기화에서 빼거나 다시 넣는다 (F23 · SR-13) */
     async function h_ToggleSkip(path: string, skipped: boolean) {
         if (!skipped && job.skip.length >= INPUT_LIMITS.skipCount) {
-            notify("error", `이번 실행에서 뺄 항목은 ${INPUT_LIMITS.skipCount}개까지입니다`);
+            notify("error", `이번 동기화에서 뺄 파일은 ${INPUT_LIMITS.skipCount}개까지입니다`);
             return;
         }
         await setSkip(job.id, skipped ? job.skip.filter((p) => p !== path) : [...job.skip, path]);
         notify(
             "info",
-            skipped ? "다시 넣었습니다. 다시 비교하세요" : "이번 실행에서 뺐습니다. 다시 비교하세요",
+            skipped ? "다시 넣었습니다. 다시 비교하세요" : "이번 동기화에서 뺐습니다. 다시 비교하세요",
         );
     }
 
@@ -437,6 +439,12 @@ export default function JobPage(iProps: itfJobPageProps) {
         const option = LIST_VIEWS.find((candidate) => candidate.value === value);
         if (!option || !_V.shown) return;
         setPicked(option.value === "status" ? null : { view: option.value, runId: _V.shown.runId });
+    }
+
+    /** 작업 이름 줄의 [⋯] 메뉴를 단추 아래에 연다 (명령 복사처럼 자주 쓰지 않는 도구) */
+    function h_ToolsMenu(button: HTMLElement) {
+        const rect = button.getBoundingClientRect();
+        setToolsMenu({ x: rect.right - 240, y: rect.bottom + 4 });
     }
 
     /** 작업을 지운다 */
@@ -472,6 +480,16 @@ export default function JobPage(iProps: itfJobPageProps) {
                             삭제
                         </ZBCButton>
                     )}
+                    <ZBCButton
+                        small
+                        aria-label="더 보기"
+                        aria-haspopup="menu"
+                        aria-expanded={toolsMenu !== null}
+                        title="더 보기 (명령 복사)"
+                        onClick={(event) => h_ToolsMenu(event.currentTarget)}
+                    >
+                        ⋯
+                    </ZBCButton>
                 </div>
                 <div className={styles.paths} title={`${job.source} → ${job.dest}`}>
                     <span className={styles.path}>{job.source}</span>
@@ -487,13 +505,13 @@ export default function JobPage(iProps: itfJobPageProps) {
                         }
                     >
                         {/* 항목마다 끊기지 않게 묶고, 좁으면 항목 사이에서만 줄을 바꾼다 */}
-                        <span className={styles.spaceItem}>비교 시점</span>
+                        <span className={styles.spaceItem}>비교할 때</span>
                         <span className={styles.spaceItem}>원본 {describeSpace(_V.shown.space.source)}</span>
                         <span className={styles.spaceItem}>대상 {describeSpace(_V.shown.space.dest)}</span>
                         <span className={styles.spaceItem}>
-                            옮길 크기 {formatBytes(_V.shown.space.transferBytes)}
+                            보낼 크기 {formatBytes(_V.shown.space.transferBytes)}
                         </span>
-                        {isDestTooSmall(_V.shown.space) && <b>대상 드라이브 여유가 옮길 크기보다 작습니다</b>}
+                        {isDestTooSmall(_V.shown.space) && <b>대상 드라이브 여유가 보낼 크기보다 작습니다</b>}
                     </div>
                 )}
             </header>
@@ -506,28 +524,13 @@ export default function JobPage(iProps: itfJobPageProps) {
                     variant="primary"
                     onClick={h_Sync}
                     disabled={!_V.canRun || _V.preview === null || !hasChanges(_V.preview)}
-                    title={_V.preview ? undefined : "비교한 뒤 30분 안에만 실행할 수 있습니다"}
+                    title={_V.preview ? undefined : "비교한 뒤 30분 안에만 동기화할 수 있습니다"}
                 >
                     {f_SyncLabel(_V.preview)}
                 </ZBCButton>
                 <ZBCButton onClick={h_Cancel} disabled={_V.active === null}>
                     중지
                 </ZBCButton>
-                <span className={styles.gap} />
-                <ZBCButton small onClick={() => void h_CopyCommand("preview")}>
-                    미리보기 명령 복사
-                </ZBCButton>
-                <ZBCButton small onClick={() => void h_CopyCommand("execute")}>
-                    실행 명령 복사
-                </ZBCButton>
-                <div className={styles.tabs}>
-                    <button type="button" className={f_TabClass("compare")} onClick={() => setTab("compare")}>
-                        비교 결과
-                    </button>
-                    <button type="button" className={f_TabClass("history")} onClick={() => setTab("history")}>
-                        실행 기록
-                    </button>
-                </div>
             </div>
 
             {job.schedule.paused && (
@@ -546,7 +549,7 @@ export default function JobPage(iProps: itfJobPageProps) {
                 <div className={styles.skipped}>
                     <div className={styles.skippedHead}>
                         <span>
-                            <b>이번 실행에서 뺀 항목 {job.skip.length}개</b> — 다시 비교한 목록으로만
+                            <b>이번 동기화에서 뺀 파일 {job.skip.length}개</b> — 다시 비교한 목록으로만
                             동기화합니다. 실제 동기화가 성공하면 다시 넣습니다.
                         </span>
                         <ZBCButton small onClick={() => void setSkip(job.id, [])}>
@@ -580,8 +583,8 @@ export default function JobPage(iProps: itfJobPageProps) {
                 _V.shown.status === "success" && (
                     <div className={styles.chain}>
                         <span>
-                            이 작업에 이어서 <b>{nextJob.name}</b>을(를) 실행하도록 되어 있습니다. 비교 결과를
-                            확인한 뒤 실행하세요.
+                            이 작업 다음에 <b>{nextJob.name}</b>을(를) 이어서 돌리도록 되어 있습니다. 비교
+                            결과를 확인한 뒤 동기화하세요.
                         </span>
                         <ZBCButton
                             small
@@ -589,10 +592,32 @@ export default function JobPage(iProps: itfJobPageProps) {
                             disabled={!_V.canRun}
                             title={_V.canRun ? undefined : "rclone을 쓸 수 있어야 비교할 수 있습니다"}
                         >
-                            이어서: {nextJob.name} 비교
+                            다음 작업 {nextJob.name} 비교
                         </ZBCButton>
                     </div>
                 )}
+
+            {/* 아래 내용만 바꾸는 탭 (할 일 단추와 따로 둔다) */}
+            <div className={styles.tabs} role="tablist" aria-label="아래에 볼 것">
+                <button
+                    type="button"
+                    role="tab"
+                    aria-selected={tab === "compare"}
+                    className={f_TabClass("compare")}
+                    onClick={() => setTab("compare")}
+                >
+                    파일 목록
+                </button>
+                <button
+                    type="button"
+                    role="tab"
+                    aria-selected={tab === "history"}
+                    className={f_TabClass("history")}
+                    onClick={() => setTab("history")}
+                >
+                    기록
+                </button>
+            </div>
 
             {tab === "compare" ? (
                 <>
@@ -614,7 +639,7 @@ export default function JobPage(iProps: itfJobPageProps) {
                         {_V.shown && (
                             <select
                                 className={styles.viewSelect}
-                                aria-label="기타 보기"
+                                aria-label="목록 보기"
                                 value={listView}
                                 onChange={(event) => h_PickView(event.target.value)}
                             >
@@ -684,7 +709,8 @@ export default function JobPage(iProps: itfJobPageProps) {
                         />
                     ) : (
                         <div className={styles.placeholder}>
-                            [비교]를 누르면 추가·변경·삭제될 파일을 미리 보여줍니다. 대상은 바뀌지 않습니다.
+                            [비교]를 누르면 동기화할 때 대상에서 바뀔 파일을 미리 보여 줍니다. 비교만으로는
+                            대상이 바뀌지 않습니다.
                         </div>
                     )}
                 </>
@@ -702,15 +728,17 @@ export default function JobPage(iProps: itfJobPageProps) {
                 {_V.shown ? (
                     <>
                         <span className={styles.footerItem}>
-                            {_V.shown.kind === "preview" ? "미리보기" : "실행"}{" "}
+                            {_V.shown.kind === "preview" ? "비교" : "동기화"}{" "}
                             {formatDateTime(_V.shown.startedAt)}
                             {_V.shown.endedAt ? ` · ${formatDuration(_V.shown)}` : ""}
                         </span>
                         {_V.shown.kind === "preview" && !_V.active && (
                             <span className={styles.footerItem}>
-                                {_V.preview?.runId === _V.shown.runId
-                                    ? "이 미리보기로 실행할 수 있습니다"
-                                    : "지난 미리보기 — 실행하려면 다시 비교"}
+                                {_V.preview?.runId !== _V.shown.runId
+                                    ? "오래된 비교 결과 — 동기화하려면 다시 비교하세요"
+                                    : hasChanges(_V.preview)
+                                      ? "이 비교 결과로 동기화할 수 있습니다"
+                                      : "바뀔 것이 없습니다 — 동기화할 필요가 없습니다"}
                             </span>
                         )}
                         {_V.shown.backupDir && (
@@ -720,11 +748,23 @@ export default function JobPage(iProps: itfJobPageProps) {
                         )}
                     </>
                 ) : (
-                    <span className={styles.footerItem}>아직 실행 기록이 없습니다</span>
+                    <span className={styles.footerItem}>아직 기록이 없습니다</span>
                 )}
             </footer>
 
             {infoRun && <RunInfoDialog run={infoRun} onClose={() => setInfoRun(null)} />}
+            {toolsMenu && (
+                <ItemMenu
+                    x={toolsMenu.x}
+                    y={toolsMenu.y}
+                    title={job.name}
+                    entries={[
+                        { label: "비교 명령 복사", onSelect: () => void h_CopyCommand("preview") },
+                        { label: "동기화 명령 복사", onSelect: () => void h_CopyCommand("execute") },
+                    ]}
+                    onClose={() => setToolsMenu(null)}
+                />
+            )}
             {menu && (
                 <ItemMenu
                     x={menu.x}

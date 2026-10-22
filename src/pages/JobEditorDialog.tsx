@@ -186,8 +186,8 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
                     <span className={styles.driveHint}>
                         Google Drive 폴더 주소입니다.{" "}
                         {remotesState === "loading"
-                            ? "연결(리모트) 목록을 읽는 중…"
-                            : "연결(리모트) 목록을 읽지 못했습니다. rclone 상태를 확인하세요."}
+                            ? "리모트(연결) 목록을 읽는 중…"
+                            : "리모트(연결) 목록을 읽지 못했습니다. rclone 상태를 확인하세요."}
                     </span>
                 );
             }
@@ -427,7 +427,7 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
                             checked={job.mode === "copy"}
                             onChange={() => f_Patch({ mode: "copy" })}
                         >
-                            copy — 대상에만 있는 파일은 그대로 둠
+                            copy — 대상에만 있는 파일은 지우지 않음
                         </ZBCCheck>
                         <ZBCCheck
                             type="radio"
@@ -439,8 +439,8 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
                     </div>
                     {job.mode === "sync" && (
                         <div className={styles.warning}>
-                            sync는 원본에 없는 파일을 대상에서 지웁니다. 실행 전에 지울 파일 목록을 확인하게
-                            됩니다.
+                            sync는 원본에 없는 파일을 대상에서 지웁니다. 동기화하기 전에 지울 파일 목록을
+                            확인하게 됩니다.
                         </div>
                     )}
                 </ZBCField>
@@ -624,12 +624,12 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
                         </>
                     )}
                     <ZBCField
-                        label="이 작업이 성공하면 이어서 (체인)"
-                        hint="이 작업의 자동 실행이 성공하거나 바뀔 것이 없을 때만 이어서 돕니다. 실패하거나 멈추면 이어서 돌지 않습니다. 수동 실행 뒤에는 [이어서] 단추로 비교를 시작합니다."
+                        label="이 작업이 끝나면 이어서 돌릴 작업"
+                        hint="자동 실행에서는 이 작업이 성공하거나 바뀔 것이 없을 때만 이어서 비교하고, 안전하면 동기화까지 합니다. 실패하거나 멈추면 이어서 돌지 않습니다. 직접 동기화한 뒤에는 [다음 작업 … 비교] 단추로 비교만 시작합니다."
                     >
                         <select
                             className={styles.select}
-                            aria-label="이어서 실행할 작업"
+                            aria-label="이어서 돌릴 작업"
                             value={job.schedule.chainNext ?? ""}
                             onChange={(event) => f_PatchSchedule({ chainNext: event.target.value || null })}
                         >
@@ -660,12 +660,13 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
                         disabled={!job.safety.backup}
                         onChange={(allowIgnoreErrors) => f_PatchSafety({ allowIgnoreErrors })}
                     >
-                        --ignore-errors 허용 (고급, 백업이 켜져 있을 때만)
+                        --ignore-errors 허용 (고급 · 백업을 켠 작업에서만)
                     </ZBCCheck>
                     {job.safety.allowIgnoreErrors && (
                         <div className={styles.warning}>
-                            원본 폴더를 읽지 못해도 삭제를 진행합니다. 읽기 실패가 대상 파일 삭제로 이어질 수
-                            있습니다.
+                            원본 폴더 일부를 읽지 못해도 삭제를 진행합니다. 읽지 못한 파일을 "원본에 없음"으로
+                            보고 대상 사본을 지울 수 있어서, 지운 것을 되살릴 수 있게 백업을 켠 작업에서만
+                            허용합니다.
                         </div>
                     )}
                 </fieldset>
@@ -673,7 +674,7 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
                 <ZBCField
                     label="rclone 옵션 파일"
                     action={<ZBCButton onClick={() => void h_PickOptions()}>파일 선택</ZBCButton>}
-                    hint="편집 창에 없는 rclone 옵션을 한 줄에 하나씩 적은 텍스트 파일입니다(예: --bwlimit 10M, --checksum, --drive-chunk-size=64M). 속도 · 비교 방식 · 크기와 날짜 거르기 · 백엔드 설정만 받고, 삭제 한도 · 백업 · 필터 · 로그처럼 앱이 정하는 옵션은 받지 않습니다. 비교 · 실행할 때마다 다시 읽고, 내용은 실행한 명령 기록에 남으니 비밀값은 넣지 마세요."
+                    hint="편집 창에 없는 rclone 옵션을 한 줄에 하나씩 적은 텍스트 파일입니다(예: --bwlimit 10M, --checksum, --drive-chunk-size=64M). 속도 · 비교 방식 · 크기와 날짜 거르기 · 백엔드 설정만 받고, 삭제 한도 · 백업 · 필터 · 로그처럼 앱이 정하는 옵션은 받지 않습니다. 비교 · 동기화할 때마다 다시 읽고, 내용은 기록의 명령에 남으니 비밀값은 넣지 마세요."
                 >
                     <ZBCInput
                         aria-label="rclone 옵션 파일"

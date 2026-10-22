@@ -192,7 +192,7 @@ export class clsScheduler {
             // 미리보기가 도는 동안 사람이 자동 실행을 끄거나 멈췄으면 실행하지 않는다. 한도도 지금 값으로 다시 본다.
             const latest = await this.deps.jobs.get(jobId);
             if (!f_Allowed(latest)) {
-                return { action: "skipped", reason: "미리보기 중에 자동 실행이 꺼지거나 멈췄습니다" };
+                return { action: "skipped", reason: "비교하는 중에 자동 실행이 꺼지거나 멈췄습니다" };
             }
             const latestStop = autoStopReason(latest, preview);
             if (latestStop !== null) return await this.pause(latest, f_Reason(latestStop));

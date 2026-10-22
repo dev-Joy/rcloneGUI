@@ -109,7 +109,7 @@ export default function RunInfoDialog(iProps: itfRunInfoDialogProps) {
     function f_Config(config: itfConfigSnapshot) {
         return (
             <dl className={styles.facts}>
-                <dt>출처</dt>
+                <dt>어디서 정했나</dt>
                 <dd>{SOURCE_NAMES[config.source]}</dd>
                 <dt>경로</dt>
                 <dd className={styles.path} title={config.path}>
@@ -131,7 +131,7 @@ export default function RunInfoDialog(iProps: itfRunInfoDialogProps) {
 
     return (
         <ZBCModal
-            title={`실행 정보 · ${formatDateTime(run.startedAt)} ${run.kind === "preview" ? "미리보기" : "실행"}`}
+            title={`기록 정보 · ${formatDateTime(run.startedAt)} ${run.kind === "preview" ? "비교" : "동기화"}`}
             onClose={onClose}
             wide
             footer={<ZBCButton onClick={onClose}>닫기</ZBCButton>}
@@ -149,12 +149,12 @@ export default function RunInfoDialog(iProps: itfRunInfoDialogProps) {
 
                 {_V.snapshot === null ? (
                     <p className={styles.note}>
-                        이 실행은 필터 · rclone.conf 기록을 남기기 전 버전에서 돌았습니다.
+                        이 기록은 제외 규칙 · rclone.conf 정보를 남기기 전 버전에서 만들어졌습니다.
                     </p>
                 ) : (
                     <>
                         <section className={styles.section}>
-                            <h3 className={styles.title}>그때의 필터 (filter.txt)</h3>
+                            <h3 className={styles.title}>그때 쓴 제외 규칙 (filter.txt)</h3>
                             {_V.filterLines.length === 0 ? (
                                 <p className={styles.note}>필터 없음 — 모든 파일을 비교했습니다.</p>
                             ) : (

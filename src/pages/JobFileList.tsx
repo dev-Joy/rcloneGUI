@@ -136,7 +136,7 @@ export default function JobFileList(iProps: itfJobFileListProps) {
         <div className={styles.JobFileList}>
             <div className={styles.head}>
                 <span>원본</span>
-                <span className={styles.headAction}>일어날 일</span>
+                <span className={styles.headAction}>{_V.executed ? "한 일" : "할 일"}</span>
                 <span>대상</span>
             </div>
             <div className={styles.scroll} ref={scrollRef}>

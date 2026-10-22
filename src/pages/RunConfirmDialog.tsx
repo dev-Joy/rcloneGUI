@@ -99,7 +99,7 @@ export default function RunConfirmDialog(iProps: itfRunConfirmDialogProps) {
 
     return (
         <ZBCModal
-            title="실행 확인"
+            title="동기화 확인"
             onClose={onCancel}
             footer={
                 <>
@@ -109,7 +109,7 @@ export default function RunConfirmDialog(iProps: itfRunConfirmDialogProps) {
                         disabled={_V.deletes > 0 && !checked}
                         onClick={h_Confirm}
                     >
-                        실행
+                        동기화
                     </ZBCButton>
                 </>
             }
@@ -133,9 +133,9 @@ export default function RunConfirmDialog(iProps: itfRunConfirmDialogProps) {
                 </ul>
                 {preview.space && isDestTooSmall(preview.space) && (
                     <p className={styles.warn}>
-                        대상 드라이브 여유({formatBytes(preview.space.dest?.free ?? 0)})가 옮길 크기(
-                        {formatBytes(preview.space.transferBytes)})보다 작습니다(비교 시점). 실행하면 공간이
-                        모자라 실패할 수 있습니다.
+                        대상 드라이브 여유({formatBytes(preview.space.dest?.free ?? 0)})가 보낼 크기(
+                        {formatBytes(preview.space.transferBytes)})보다 작습니다(비교할 때 기준). 동기화하면
+                        공간이 모자라 실패할 수 있습니다.
                     </p>
                 )}
                 {_V.newer.length > 0 && (
@@ -186,8 +186,8 @@ export default function RunConfirmDialog(iProps: itfRunConfirmDialogProps) {
                             )}
                         </div>
                         <ZBCCheck checked={checked} onChange={setChecked}>
-                            위 {_V.deletes}개 파일이 대상에서 지워지는 것을 확인했습니다. 실행 중 지울 파일이
-                            더 늘면 멈춥니다.
+                            위 {_V.deletes}개 파일이 대상에서 지워지는 것을 확인했습니다. 동기화 중 지울
+                            파일이 더 늘면 멈춥니다.
                         </ZBCCheck>
                     </>
                 )}

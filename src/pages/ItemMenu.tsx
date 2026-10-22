@@ -3,7 +3,7 @@
  *
  *  @author dev-Joy    2026-10-16
  *  @description
- *      - 비교 목록 줄의 오른쪽 클릭 메뉴 (F23). 이번 실행에서 빼기 · 경로 복사
+ *      - 비교 목록 줄의 오른쪽 클릭 메뉴 (F23). 이번 동기화에서 빼기 · 경로 복사
  *      - 바깥을 누르거나 Esc · 스크롤 · 창 크기 변경이면 닫힌다
  */
 
@@ -64,7 +64,12 @@ export default function ItemMenu(iProps: itfItemMenuProps) {
 
     // 열릴 때 한 번만 첫 항목에 초점을 둔다 (부모가 다시 그려도 화살표로 옮긴 초점을 지킨다).
     useEffect(() => {
+        // 메뉴를 연 곳(단추 · 목록 줄)을 기억해 두었다가 닫힐 때 초점을 돌려준다 (키보드 사용자가 자리를 잃지 않게)
+        const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
         menuRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+        return () => {
+            if (opener?.isConnected) opener.focus();
+        };
     }, []);
 
     // 바깥 클릭 · Esc · 스크롤 · 창 크기 변경이면 닫는다.

@@ -81,7 +81,7 @@ export const STATUS_NAMES: Record<typItemStatus, string> = {
 
 /** 상태 칩에 쓰는 이름. copy에서 대상에만 있는 파일은 지워지지 않으므로 다르게 부른다. */
 export function chipName(status: typItemStatus, mode: typJob["mode"]): string {
-    return status === "delete" && mode === "copy" ? "대상에만" : STATUS_NAMES[status];
+    return status === "delete" && mode === "copy" ? "대상에만 있음" : STATUS_NAMES[status];
 }
 
 /** 목록 가운데 열: 이 파일에 무슨 일이 일어나는지(미리보기) 또는 일어났는지(실행) */
@@ -97,7 +97,7 @@ export function actionLabel(
         case "change":
             return done ? "덮어씀" : "원본으로 덮어씀";
         case "delete":
-            if (run.mode === "copy") return "그대로 둠";
+            if (run.mode === "copy") return "대상에만 있음 (지우지 않음)";
             if (done) return run.backupDir ? "백업으로 옮김" : "삭제함";
             return backup ? "삭제 → 백업" : "삭제";
         case "same":
@@ -179,18 +179,18 @@ export function itemActionLabel(
     run: Pick<itfRunMeta, "kind" | "mode" | "backupDir" | "dirs">,
     backup: boolean,
 ): string {
-    if (item.note === "excluded") return "제외됨 · 건드리지 않음";
+    if (item.note === "excluded") return "제외 패턴에 걸림 · 건드리지 않음";
     const label = item.isDir ? dirActionLabel(item.status, run) : actionLabel(item.status, run, backup);
-    return item.note === "pending" ? `${label} · 처리 안 됨` : label;
+    return item.note === "pending" ? `${label} · 처리 못 함` : label;
 }
 
 /** 폴더 항목의 일어날 일 (F25). 확인하지 못한 지우기는 "비어 있으면"을 붙인다 */
 export function dirActionLabel(status: typItemStatus, run: Pick<itfRunMeta, "kind" | "dirs">): string {
     const done = run.kind === "execute";
     if (status === "add") return done ? "폴더 만듦" : "폴더 만들기";
-    if (status === "same") return "남김 (파일이 있음)";
-    if (!done) return "대상에만 있음 · 비어 있으면 지움";
-    return run.dirs?.verified ? "빈 폴더 지움" : "지우기 시도 (비어 있을 때만)";
+    if (status === "same") return "폴더 남김 (안에 파일 있음)";
+    if (!done) return "대상에만 있는 폴더 (비어 있으면 지움)";
+    return run.dirs?.verified ? "빈 폴더 지움" : "빈 폴더면 지움";
 }
 
 export function countsLine(counts: typCounts, mode: typJob["mode"]): string {

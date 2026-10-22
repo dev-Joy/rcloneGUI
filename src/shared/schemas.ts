@@ -46,7 +46,7 @@ const skipPathSchema = z
 
 const skipListSchema = z
     .array(skipPathSchema)
-    .max(INPUT_LIMITS.skipCount, `이번 실행에서 뺄 항목은 ${INPUT_LIMITS.skipCount}개까지입니다`);
+    .max(INPUT_LIMITS.skipCount, `이번 동기화에서 뺄 파일은 ${INPUT_LIMITS.skipCount}개까지입니다`);
 
 /**
  *  메인 클래스 / export 함수

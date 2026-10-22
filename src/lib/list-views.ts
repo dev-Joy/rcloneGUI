@@ -88,13 +88,13 @@ export function viewProblem(
 ): string | null {
     switch (view) {
         case "excluded":
-            return run.kind === "preview" && run.status === "success" ? null : "성공한 미리보기에서만";
+            return run.kind === "preview" && run.status === "success" ? null : "성공한 비교 결과에서만";
         case "new":
-            if (run.kind !== "preview") return "미리보기에서만";
-            return baselineExecute(history, run) ? null : "앞선 실제 동기화가 없음";
+            if (run.kind !== "preview") return "비교 결과에서만";
+            return baselineExecute(history, run) ? null : "이전 동기화가 없음";
         case "pending":
-            if (run.kind !== "execute" || run.previewRunId === null) return "실제 동기화 기록에서만";
-            return run.status === "queued" || run.status === "running" ? "실행이 끝난 뒤" : null;
+            if (run.kind !== "execute" || run.previewRunId === null) return "동기화 결과를 열었을 때만";
+            return run.status === "queued" || run.status === "running" ? "동기화가 끝난 뒤" : null;
         default:
             return null;
     }

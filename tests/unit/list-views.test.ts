@@ -169,9 +169,9 @@ describe("보기 문구와 쓸 수 있는 실행 (F22)", () => {
     it("제외됨 · 처리 안 됨 문구", () => {
         const run = f_Run({});
         expect(itemActionLabel({ status: "same", note: "excluded" }, run, true)).toBe(
-            "제외됨 · 건드리지 않음",
+            "제외 패턴에 걸림 · 건드리지 않음",
         );
-        expect(itemActionLabel({ status: "add", note: "pending" }, run, true)).toBe("새로 복사 · 처리 안 됨");
+        expect(itemActionLabel({ status: "add", note: "pending" }, run, true)).toBe("새로 복사 · 처리 못 함");
         expect(itemActionLabel({ status: "delete" }, run, true)).toBe("삭제 → 백업");
     });
 

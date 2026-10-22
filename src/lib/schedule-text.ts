@@ -81,7 +81,7 @@ export function describeSchedule(schedule: Pick<typJob["schedule"], "cron" | "ev
 export function lastRunText(history: readonly Pick<itfRunMeta, "kind" | "status" | "startedAt">[]): string {
     const executeIndex = history.findIndex((run) => run.kind === "execute");
     const latest = history[0];
-    if (executeIndex === -1) return latest ? `비교 ${formatDateTime(latest.startedAt)}` : "실행 기록 없음";
+    if (executeIndex === -1) return latest ? `비교 ${formatDateTime(latest.startedAt)}` : "기록 없음";
     const execute = history[executeIndex];
     const label =
         execute.status === "success"

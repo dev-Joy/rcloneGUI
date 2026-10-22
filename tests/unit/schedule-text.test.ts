@@ -71,7 +71,7 @@ describe("lastRunText", () => {
         expect(lastRunText([f_Run("preview", "failed", t2), f_Run("preview", "success", t1)])).toBe(
             `비교 ${formatDateTime(t2)}`,
         );
-        expect(lastRunText([])).toBe("실행 기록 없음");
+        expect(lastRunText([])).toBe("기록 없음");
     });
 });
 

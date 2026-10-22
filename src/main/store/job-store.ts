@@ -82,7 +82,7 @@ export function assertChain(job: Pick<typJob, "id" | "schedule">, jobs: readonly
     const next = job.schedule.chainNext;
     if (next === null) return;
     const byId = new Map(jobs.map((j) => [j.id, j]));
-    if (!byId.has(next)) throw new clsJobError("CHAIN_MISSING", "이어서 실행할 작업을 찾을 수 없습니다");
+    if (!byId.has(next)) throw new clsJobError("CHAIN_MISSING", "이어서 돌릴 작업을 찾을 수 없습니다");
     const seen = new Set([job.id]);
     let current: string | null = next;
     while (current !== null) {

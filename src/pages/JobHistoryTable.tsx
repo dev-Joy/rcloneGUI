@@ -64,7 +64,7 @@ export default function JobHistoryTable(iProps: itfJobHistoryTableProps) {
     return (
         <div className={styles.JobHistoryTable}>
             {runs.length === 0 ? (
-                <div className={styles.empty}>아직 실행 기록이 없습니다.</div>
+                <div className={styles.empty}>아직 기록이 없습니다.</div>
             ) : (
                 <table className={styles.table}>
                     <thead>
@@ -92,7 +92,7 @@ export default function JobHistoryTable(iProps: itfJobHistoryTableProps) {
                                 <td className={styles.td}>{formatDateTime(run.startedAt)}</td>
                                 <td className={styles.td}>
                                     {run.trigger === "schedule" ? "자동 " : ""}
-                                    {run.kind === "preview" ? "미리보기" : "실행"}
+                                    {run.kind === "preview" ? "비교" : "동기화"}
                                 </td>
                                 <td className={styles.td}>
                                     <ZBCDot tone={run.status} /> {RUN_STATUS_NAMES[run.status]}

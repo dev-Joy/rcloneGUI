@@ -90,24 +90,32 @@
             flex: 1;
         }
 
+        /* 아래 내용만 바꾸는 탭. 할 일 단추와 구분되게 목록 바로 위에 밑줄 탭으로 둔다 (intent 007) */
         .tabs {
             display: flex;
-            border: 1px solid var(--zbc-border);
-            border-radius: 6px;
-            overflow: hidden;
+            gap: 4px;
+            margin: 4px 16px 8px;
+            border-bottom: 1px solid var(--zbc-border);
         }
 
         .tab {
+            margin-bottom: -1px;
             border: 0;
-            background: var(--zbc-surface);
-            padding: 4px 12px;
+            border-bottom: 2px solid transparent;
+            background: none;
+            padding: 6px 12px;
+            color: var(--zbc-muted);
             cursor: pointer;
-            font-size: 12px;
+            font-size: 13px;
+        }
+
+        .tab:hover {
+            color: var(--zbc-text);
         }
 
         .tabSelected {
-            background: var(--zbc-accent);
-            color: var(--zbc-accent-text);
+            border-bottom-color: var(--zbc-accent);
+            color: var(--zbc-text);
             font-weight: 600;
         }
 

@@ -38,10 +38,10 @@ describe("폴더 작업 문구 (F25)", () => {
             "폴더 2개 만듦, 대상에만 있는 폴더 1개(비어 있으면 지움)",
         );
         expect(dirActionLabel("delete", { kind: "preview", dirs: f_Dirs({ remove: 1 }) })).toBe(
-            "대상에만 있음 · 비어 있으면 지움",
+            "대상에만 있는 폴더 (비어 있으면 지움)",
         );
         expect(dirActionLabel("delete", { kind: "execute", dirs: f_Dirs({ remove: 1 }) })).toBe(
-            "지우기 시도 (비어 있을 때만)",
+            "빈 폴더면 지움",
         );
     });
 
@@ -49,7 +49,7 @@ describe("폴더 작업 문구 (F25)", () => {
         const dirs = f_Dirs({ remove: 1, kept: 2, verified: true });
         expect(describeDirs({ dirs })).toBe("빈 폴더 1개 지움, 폴더 2개 남김(파일이 있음)");
         expect(dirActionLabel("delete", { kind: "execute", dirs })).toBe("빈 폴더 지움");
-        expect(dirActionLabel("same", { kind: "execute", dirs })).toBe("남김 (파일이 있음)");
+        expect(dirActionLabel("same", { kind: "execute", dirs })).toBe("폴더 남김 (안에 파일 있음)");
     });
 
     it("폴더 작업만 있어도 바뀔 것이 있고, 예전 기록(dirs 없음)은 파일만 본다", () => {
