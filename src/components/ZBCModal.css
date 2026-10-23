@@ -25,6 +25,11 @@
         box-shadow: var(--zbc-shadow);
     }
 
+    .zbcModal:focus {
+        /* 열릴 때 상자 자체에 준 초점은 테두리를 그리지 않는다 (Tab으로 다니는 칸은 그대로 보인다) */
+        outline: none;
+    }
+
     .zbcModalWide {
         width: 680px;
     }
