@@ -24,6 +24,7 @@ import type {
     typPickFolderInput,
     itfAppInfo,
     itfGroup,
+    itfSavedPattern,
     typSettings,
 } from "./types";
 
@@ -61,6 +62,12 @@ export interface itfRcloneGuiApi {
         save(input: { id?: string; name: string }): Promise<typResult<itfGroup>>;
         /** 그룹을 지우고 그 그룹의 작업은 "그룹 없음"으로 옮긴다 */
         delete(groupId: string): Promise<typResult<null>>;
+    };
+    /** 저장된 제외 패턴 (intent/002). 작업을 저장하면 그 작업의 패턴이 모인다 */
+    patterns: {
+        list(): Promise<typResult<itfSavedPattern[]>>;
+        /** 목록에서만 뺀다. 작업의 패턴은 바뀌지 않는다 */
+        delete(pattern: string): Promise<typResult<null>>;
     };
     rclone: {
         status(): Promise<typResult<itfRcloneStatus>>;
@@ -115,6 +122,8 @@ export const CHANNELS = {
     groupsList: "groups:list",
     groupsSave: "groups:save",
     groupsDelete: "groups:delete",
+    patternsList: "patterns:list",
+    patternsDelete: "patterns:delete",
     rcloneStatus: "rclone:status",
     rcloneRemotes: "rclone:remotes",
     runPreview: "run:preview",

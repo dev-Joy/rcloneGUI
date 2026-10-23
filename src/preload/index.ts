@@ -40,6 +40,10 @@ const api: itfRcloneGuiApi = {
         save: (input) => ipcRenderer.invoke(CHANNELS.groupsSave, input),
         delete: (groupId) => ipcRenderer.invoke(CHANNELS.groupsDelete, groupId),
     },
+    patterns: {
+        list: () => ipcRenderer.invoke(CHANNELS.patternsList),
+        delete: (pattern) => ipcRenderer.invoke(CHANNELS.patternsDelete, pattern),
+    },
     rclone: {
         status: () => ipcRenderer.invoke(CHANNELS.rcloneStatus),
         remotes: () => ipcRenderer.invoke(CHANNELS.rcloneRemotes),

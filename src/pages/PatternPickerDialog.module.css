@@ -1,0 +1,63 @@
+/*
+ *  @author dev-Joy 2026-10-22
+ *  @description
+ *      - PatternPickerDialog(저장된 패턴에서 추가) 스타일
+ *      - pages 레이어에 배정되어 components 레이어의 공용 스타일을 특이도 무관하게 오버라이드
+ */
+@layer pages {
+    /* 최상단 클래스 - 컴포넌트명과 동일 */
+    .PatternPickerDialog {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-width: 0;
+
+        .note {
+            margin: 0;
+            color: var(--zbc-muted);
+            font-size: 12px;
+        }
+
+        .empty {
+            margin: 8px 0;
+            color: var(--zbc-muted);
+        }
+
+        .list {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            max-height: 50vh;
+            overflow-y: auto;
+            border: 1px solid var(--zbc-border);
+            border-radius: 4px;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 8px;
+
+            & + .row {
+                border-top: 1px solid var(--zbc-border);
+            }
+        }
+
+        .check {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .pattern {
+            overflow-wrap: anywhere;
+        }
+
+        .meta {
+            margin-left: 8px;
+            color: var(--zbc-muted);
+            font-size: 12px;
+            white-space: nowrap;
+        }
+    }
+}

@@ -59,6 +59,15 @@ export interface itfGroup {
     name: string;
 }
 
+/** 저장된 제외 패턴 하나 (intent/002) */
+export interface itfSavedPattern {
+    pattern: string;
+    /** 마지막으로 작업 저장에 쓴 시각 (ISO) */
+    lastUsed: string;
+    /** 작업 저장에 쓴 횟수 */
+    useCount: number;
+}
+
 /** 한쪽 파일의 크기와 수정 시각 (rclone lsjson, F11) */
 export interface itfFileSide {
     size: number;

@@ -25,6 +25,7 @@ import { clsRunStore } from "./store/run-store";
 import { clsSettingsStore } from "./store/settings-store";
 import { clsScheduler } from "./schedule/scheduler";
 import { clsGroupStore } from "./store/group-store";
+import { clsPatternStore } from "./store/pattern-store";
 
 /**
  *  Types 정의
@@ -155,6 +156,7 @@ if (!app.requestSingleInstanceLock()) {
         await runs.closeInterrupted();
         const settings = new clsSettingsStore(database);
         const groups = new clsGroupStore(database, jobs);
+        const patterns = new clsPatternStore(database);
 
         const f_ResolveRclone = async (): Promise<string> => {
             const path = await findRclone((await settings.get()).rclonePath);
@@ -234,6 +236,7 @@ if (!app.requestSingleInstanceLock()) {
         registerIpc({
             jobs,
             groups,
+            patterns,
             runs,
             settings,
             runner,

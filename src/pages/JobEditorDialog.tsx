@@ -27,6 +27,7 @@ import { cronProblem, nextScheduleTime } from "@/shared/cron";
 import { driveFolderLocation, parseDriveFolderUrl, parseDriveLocation } from "@/shared/drive-url";
 import { findExcludeProblem, INPUT_LIMITS } from "@/shared/limits";
 import type { itfRemote, typJobInput } from "@/shared/types";
+import PatternPickerDialog from "./PatternPickerDialog";
 import styles from "./JobEditorDialog.module.css";
 
 /**
@@ -86,6 +87,8 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
     const [job, setJob] = useState<typJobInput>(initial);
     /** 제외 패턴 입력 (줄당 하나) */
     const [excludes, setExcludes] = useState(initial.excludes.join("\n"));
+    /** 저장된 패턴에서 고르는 창 (intent/002) */
+    const [pickingPatterns, setPickingPatterns] = useState(false);
     /** rclone 리모트 이름과 종류 */
     const [remotes, setRemotes] = useState<itfRemote[]>([]);
     /** 리모트 목록을 받았는지. 받기 전이나 실패했을 때 "Drive 연결이 없습니다"라고 하지 않는다 */
@@ -140,6 +143,16 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
     //
     // 이벤트 핸들러 및 내부 함수
     //
+
+    /** 저장된 패턴에서 고른 것을 칸 끝에 한 줄씩 덧붙인다. 이미 있는 줄은 넣지 않는다 (intent/002) */
+    function h_AddPatterns(patterns: string[]) {
+        const have = new Set(f_SplitExcludes(excludes));
+        const added = patterns.filter((p) => !have.has(p));
+        if (added.length === 0) return;
+        setExcludes((prev) =>
+            [...prev.split("\n").filter((line) => line.trim() !== ""), ...added].join("\n"),
+        );
+    }
 
     /** 작업의 일부 값을 바꾼다 */
     function f_Patch(value: Partial<typJobInput>) {
@@ -477,7 +490,19 @@ export default function JobEditorDialog(iProps: itfJobEditorDialogProps) {
                     }
                 >
                     <ZBCTextarea aria-label="제외 패턴" value={excludes} onChange={setExcludes} />
+                    <div>
+                        <ZBCButton small onClick={() => setPickingPatterns(true)}>
+                            저장된 패턴에서 추가
+                        </ZBCButton>
+                    </div>
                 </ZBCField>
+                {pickingPatterns && (
+                    <PatternPickerDialog
+                        current={excludeLines}
+                        onAdd={h_AddPatterns}
+                        onClose={() => setPickingPatterns(false)}
+                    />
+                )}
 
                 <div className={styles.grid}>
                     <ZBCField label="checkers">

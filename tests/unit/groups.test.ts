@@ -3,7 +3,7 @@
  *
  *  @author dev-Joy    2026-10-16
  *  @description
- *      - 작업 그룹 (F21): DB 스키마 v1 → v2, 그룹 저장 · 이름 중복 · 지우기, 작업의 groupId 검증
+ *      - 작업 그룹 (F21): DB 스키마 v1 → 최신, 그룹 저장 · 이름 중복 · 지우기, 작업의 groupId 검증
  */
 
 /**
@@ -69,7 +69,7 @@ PRAGMA user_version = 1;`);
 
         const { jobs, groups } = await f_Open();
         expect((db!.db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version).toBe(
-            2,
+            3,
         );
         expect(await groups.list()).toEqual([]);
         expect((await jobs.get("old-job")).groupId).toBeNull();

@@ -21,6 +21,7 @@ import { z } from "zod";
 import { jobSchema, runMetaSchema, settingsSchema } from "@/shared/schemas";
 import type { itfRunMeta, typJob, typSettings } from "@/shared/types";
 import { readJson } from "./json-file";
+import { rememberPatterns } from "./pattern-store";
 
 /**
  *  Types 정의
@@ -28,7 +29,7 @@ import { readJson } from "./json-file";
 export const DB_FILE_NAME = "rclonegui.db";
 
 /** 이 앱이 아는 스키마 버전. 표를 바꿀 때 올리고 f_Migrate에 단계를 더한다. */
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 const SCHEMA_V1 = `
 CREATE TABLE app_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -49,6 +50,16 @@ const SCHEMA_V2 = `
 CREATE TABLE groups (id TEXT PRIMARY KEY, name TEXT NOT NULL, position INTEGER NOT NULL);
 `;
 
+// v3 (intent/002): 저장된 제외 패턴. 작업을 저장할 때 그 작업의 패턴을 중복 없이 모은다.
+const SCHEMA_V3 = `
+CREATE TABLE exclude_patterns (
+    pattern TEXT PRIMARY KEY,
+    first_used TEXT NOT NULL,
+    last_used TEXT NOT NULL,
+    use_count INTEGER NOT NULL
+);
+`;
+
 interface itfLegacyData {
     jobs: typJob[];
     settings: typSettings | null;
@@ -59,7 +70,24 @@ interface itfLegacyData {
 /**
  *  내부 함수
  */
-function f_Migrate(db: DatabaseSync): void {
+/** v3 이전: 이미 저장된 작업들의 제외 패턴을 모은다. 작업 JSON이 깨졌으면 그 작업만 건너뛴다 */
+function f_CollectJobPatterns(db: DatabaseSync, now: Date): void {
+    const rows = db.prepare("SELECT data FROM jobs ORDER BY position, id").all() as { data: string }[];
+    for (const row of rows) {
+        const parsed = z.object({ excludes: z.array(z.string()) }).safeParse(f_ParseJson(row.data));
+        if (parsed.success) rememberPatterns(db, parsed.data.excludes, now);
+    }
+}
+
+function f_ParseJson(text: string): unknown {
+    try {
+        return JSON.parse(text) as unknown;
+    } catch {
+        return null;
+    }
+}
+
+function f_Migrate(db: DatabaseSync, now: Date): void {
     const { user_version: version } = db.prepare("PRAGMA user_version").get() as { user_version: number };
     if (version > SCHEMA_VERSION) {
         throw new clsDatabaseError(
@@ -72,6 +100,10 @@ function f_Migrate(db: DatabaseSync): void {
     try {
         if (version < 1) db.exec(SCHEMA_V1);
         if (version < 2) db.exec(SCHEMA_V2);
+        if (version < 3) {
+            db.exec(SCHEMA_V3);
+            f_CollectJobPatterns(db, now);
+        }
         db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
         db.exec("COMMIT");
     } catch (error) {
@@ -206,7 +238,7 @@ export async function openAppDatabase(baseDir: string, now = new Date()): Promis
         db.exec("PRAGMA journal_mode = WAL");
         db.exec("PRAGMA busy_timeout = 5000");
         db.exec("PRAGMA foreign_keys = ON");
-        f_Migrate(db);
+        f_Migrate(db, now);
         if (app.getMeta("json_imported_at") === null) await importLegacyJson(app, baseDir, now);
     } catch (error) {
         app.close();
@@ -227,6 +259,8 @@ export async function importLegacyJson(
         // DB에 이미 있는 행은 덮어쓰지 않는다 (OR IGNORE).
         const insertJob = db.prepare("INSERT OR IGNORE INTO jobs (id, position, data) VALUES (?, ?, ?)");
         legacy.jobs.forEach((job, index) => insertJob.run(job.id, index, JSON.stringify(job)));
+        // 가져온 작업의 제외 패턴도 모은다 (intent/002)
+        for (const job of legacy.jobs) rememberPatterns(db, job.excludes, now);
         if (legacy.settings !== null) {
             db.prepare("INSERT OR IGNORE INTO settings (id, data) VALUES (1, ?)").run(
                 JSON.stringify(legacy.settings),

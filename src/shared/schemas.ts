@@ -29,7 +29,7 @@ const pathSchema = z
     // rclone이 옵션으로 읽지 않도록 막는다.
     .refine((v) => !v.startsWith("-"), "경로는 - 로 시작할 수 없습니다");
 
-const excludeSchema = z
+export const excludeSchema = z
     .string()
     .trim()
     .min(1)

@@ -20,6 +20,7 @@ import type { typJob, typJobInput } from "@/shared/types";
 import { loadJobOptions } from "@/main/rclone/options";
 import { backupRoot, isRemote, isWebAddress, pathsOverlap } from "@/main/rclone/paths";
 import type { clsAppDatabase } from "./app-database";
+import { rememberPatterns } from "./pattern-store";
 
 /**
  *  내부 함수
@@ -168,14 +169,18 @@ export class clsJobStore {
 
         const index = jobs.findIndex((j) => j.id === id);
         const next = index === -1 ? [...jobs, job] : jobs.map((j) => (j.id === id ? job : j));
-        // 새 작업은 맨 뒤에 붙고, 고친 작업은 자리를 지킨다.
-        this.app.db
-            .prepare(
-                `INSERT INTO jobs (id, position, data)
-                 VALUES (?, (SELECT COALESCE(MAX(position), -1) + 1 FROM jobs), ?)
-                 ON CONFLICT (id) DO UPDATE SET data = excluded.data`,
-            )
-            .run(id, JSON.stringify(job));
+        this.app.transaction(() => {
+            // 새 작업은 맨 뒤에 붙고, 고친 작업은 자리를 지킨다.
+            this.app.db
+                .prepare(
+                    `INSERT INTO jobs (id, position, data)
+                     VALUES (?, (SELECT COALESCE(MAX(position), -1) + 1 FROM jobs), ?)
+                     ON CONFLICT (id) DO UPDATE SET data = excluded.data`,
+                )
+                .run(id, JSON.stringify(job));
+            // 이 작업의 제외 패턴을 저장된 패턴 목록에 모은다 (intent/002)
+            rememberPatterns(this.app.db, job.excludes);
+        });
         this.jobs = next;
         return job;
     }

@@ -18,6 +18,7 @@ import { z } from "zod";
  */
 import { CHANNELS } from "@/shared/ipc-contract";
 import {
+    excludeSchema,
     executeInputSchema,
     groupIdSchema,
     groupSaveSchema,
@@ -39,6 +40,7 @@ import type { clsJobStore } from "@/main/store/job-store";
 import type { clsRunStore } from "@/main/store/run-store";
 import type { clsSettingsStore } from "@/main/store/settings-store";
 import type { clsGroupStore } from "@/main/store/group-store";
+import type { clsPatternStore } from "@/main/store/pattern-store";
 import type { clsScheduler } from "@/main/schedule/scheduler";
 
 /**
@@ -47,6 +49,7 @@ import type { clsScheduler } from "@/main/schedule/scheduler";
 export interface itfIpcDeps {
     jobs: clsJobStore;
     groups: clsGroupStore;
+    patterns: clsPatternStore;
     runs: clsRunStore;
     settings: clsSettingsStore;
     runner: clsRcloneRunner;
@@ -122,6 +125,12 @@ export function registerIpc(deps: itfIpcDeps): void {
     f_Handle(CHANNELS.groupsDelete, groupIdSchema, async (groupId) => {
         await deps.groups.delete(groupId);
         deps.getWindow()?.webContents.send(CHANNELS.jobsChanged);
+        return null;
+    });
+    // 저장된 제외 패턴 (intent/002). 지워도 작업은 바뀌지 않는다
+    f_Handle(CHANNELS.patternsList, none, () => deps.patterns.list());
+    f_Handle(CHANNELS.patternsDelete, excludeSchema, async (pattern) => {
+        await deps.patterns.delete(pattern);
         return null;
     });
     f_Handle(CHANNELS.jobsNextRuns, none, async () =>
