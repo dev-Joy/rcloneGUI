@@ -367,6 +367,18 @@
 - 사용자가 확인한 용어표에서 구현 중 바뀐 것(다시 확인 필요): "업로드 확인 중" → "전송 마무리 중", 체인 칸 "이어서 돌릴 작업", 탭 "파일 목록 | 기록"
 - 남은 것: 탭 화살표 키 · tabpanel 없음, 886px에서 수정 시각 열 머리 "원." · "대." 잘림(이전부터), "전송 마무리 중" · 자동 실행 멈춤 띠 · Drive 안내는 화면으로 못 봄
 
+### [TASK_036] : (2026-10-22) [제외 패턴 저장 · 골라 넣기 (intent/002)]
+
+- 명세: `docs/specs/2026-10-22-exclude-patterns.md`. DB 스키마 v3 `exclude_patterns`(패턴 · 처음/마지막 쓴 시각 · 쓴 횟수). v2 → v3 이전과 예전 JSON 가져오기 때 기존 작업의 패턴을 모음
+- `pattern-store.ts`: `rememberPatterns`(excludeSchema 통과한 줄만, trim 기준 중복 없음, 대소문자 구분), `clsPatternStore.list`(쓴 횟수 → 최근 순) · `delete`(목록에서만). `clsJobStore.save`가 작업 행과 패턴을 한 트랜잭션으로 씀
+- IPC `patterns:list` · `patterns:delete`(excludeSchema 검증). 편집 창 [저장된 패턴에서 추가] → `PatternPickerDialog`(체크박스 · 찾기 · 이미 있는 줄 잠금 · [추가: N개] · [목록에서 지우기])
+- `ZBCModal`: 대화상자 위 대화상자에서 Esc는 맨 위 것만 닫음(OPEN_MODALS)
+- 테스트: patterns.test.ts(이전 · 손상 행 건너뜀 · 중복과 횟수 · 거부된 저장 롤백 · 지운 뒤 다시 저장 · 예전 JSON), groups.test.ts user_version 3
+- R1: reviewer REJECTED — docs/works 미갱신(코드 결함 없음). app-verifier REJECTED — 패턴 창 내용(560px)이 대화상자(520px)보다 넓어 잘리고 가로 스크롤, 초점이 body로 감 · Tab이 아래 편집 창으로 샘. R2 수정: 패턴 창을 넓은 대화상자로 · 고정 폭 제거, ZBCModal이 Tab을 맨 위 대화상자 안에서 돌리고 닫히면 연 단추로 초점 반환, 목록에서 지우면 찾기 칸으로 초점, 이전 때도 excludeSchema로 거름(손상 행 테스트)
+- R2: reviewer APPROVED(확인 필요: autoFocus 대화상자에서 연 곳을 effect에서 잡으면 안쪽 칸이 잡힘). app-verifier REJECTED — 같은 원인으로 편집 창 · 패턴 창 · 그룹 이름 창을 닫으면 초점이 body로 감(레이아웃 · Tab 가두기 · Esc는 통과). R3 수정: 연 곳을 처음 그릴 때(useState 초기값) 잡음, autoFocus 칸이 없는 대화상자는 열릴 때 상자로 초점(tabIndex -1)
+- R3: reviewer · app-verifier 모두 APPROVED(초점 반환: 편집 · 패턴 · 그룹 · 설정 · 동기화 확인 · 기록 정보, 동기화 확인 창은 Enter · Space로 실행 안 됨, 886 · 1266px 넘침 없음)
+- 남은 것: 열린 직후 상자에 초점이 있을 때 Shift+Tab 한 번이 뒤 화면으로 빠질 수 있음(정적 의견), v2 → v3 이전은 단위 테스트로만 확인. 작업 간 패턴 묶음 · 이름 붙이기는 하지 않음
+
 ## Error
 
 ### [ERR_001] : (2026-10-11) oxlint `no-restricted-imports`의 `group: ["../*"]`가 `../lib/format`을 못 잡음 → TASK_003
